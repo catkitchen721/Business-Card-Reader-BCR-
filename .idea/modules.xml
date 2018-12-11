@@ -2,8 +2,11 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/AndroidOCR.iml" filepath="$PROJECT_DIR$/AndroidOCR.iml" />
+      <module fileurl="file://D:\學校檔案\專題\四\Business-Card-Reader-BCR--master\Business-Card-Reader-BCR--master\AndroidOCR.iml" filepath="D:\學校檔案\專題\四\Business-Card-Reader-BCR--master\Business-Card-Reader-BCR--master\AndroidOCR.iml" />
+      <module fileurl="file://$PROJECT_DIR$/Business-Card-Reader-BCR--master.iml" filepath="$PROJECT_DIR$/Business-Card-Reader-BCR--master.iml" />
       <module fileurl="file://$PROJECT_DIR$/app/app.iml" filepath="$PROJECT_DIR$/app/app.iml" />
+      <module fileurl="file://D:\學校檔案\專題\四\Business-Card-Reader-BCR--master\Business-Card-Reader-BCR--master\app\app.iml" filepath="D:\學校檔案\專題\四\Business-Card-Reader-BCR--master\Business-Card-Reader-BCR--master\app\app.iml" />
+      <module fileurl="file://$PROJECT_DIR$/openCVLibrary331/openCVLibrary331.iml" filepath="$PROJECT_DIR$/openCVLibrary331/openCVLibrary331.iml" />
     </modules>
   </component>
 </project>

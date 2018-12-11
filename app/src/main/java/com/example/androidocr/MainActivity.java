@@ -1,18 +1,39 @@
 package com.example.androidocr;
 
+import android.Manifest;
+import android.app.Activity;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.content.res.AssetManager;
 import android.graphics.Bitmap;
+import android.graphics.Color;
 import android.graphics.BitmapFactory;
+import android.net.Uri;
+import android.os.Build;
+import android.os.Environment;
 import android.provider.ContactsContract;
+import android.provider.MediaStore;
+import android.support.v4.app.ActivityCompat;
+import android.support.v4.content.ContextCompat;
+import android.support.v4.content.PermissionChecker;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
 import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import com.googlecode.tesseract.android.TessBaseAPI;
+
+import org.opencv.android.BaseLoaderCallback;
+import org.opencv.android.LoaderCallbackInterface;
+import org.opencv.android.OpenCVLoader;
+import org.opencv.android.Utils;
+import org.opencv.core.Mat;
+import org.opencv.imgproc.Imgproc;
+import org.opencv.osgi.OpenCVInterface;
+import org.opencv.osgi.OpenCVNativeLoader;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -24,18 +45,42 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class MainActivity extends AppCompatActivity {
+    static {
+        System.loadLibrary("opencv_java3");
+    }
+
+    private BaseLoaderCallback mLoaderCallback = new BaseLoaderCallback(this) {
+        @Override
+        public void onManagerConnected(int status) {
+            super.onManagerConnected(status);
+        }
+    };
 
     Bitmap image;
     private TessBaseAPI mTess;
     String datapath = "";
 
-    ImageView testImage;
+    long timeSeed = 0l;
+
+    ImageView displayImage;
     TextView runOCR;
     TextView displayText;
     TextView displayEmail;
     TextView displayPhone;
     TextView displayName;
     TextView openContacts;
+    TextView takePhoto;
+
+    private static final int REQUEST_EXTERNAL_STORAGE = 1;
+    private static String[] PERMISSIONS_STORAGE = {
+            "android.permission.READ_EXTERNAL_STORAGE",
+            "android.permission.WRITE_EXTERNAL_STORAGE" };
+
+    private static final int REQUEST_CAMERA = 2;
+    private static String[] PERMISSIONS_CAMERA = {
+            "android.permission.CAMERA" };
+
+    private static final int REQUEST_TO_CAMERA = 15;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -44,15 +89,19 @@ public class MainActivity extends AppCompatActivity {
 
         runOCR = (TextView) findViewById(R.id.textView);
         openContacts = (TextView) findViewById(R.id.textView6);
+        takePhoto = (TextView) findViewById(R.id.textView7);
 
         displayText = (TextView) findViewById(R.id.textView2);
         displayName = (TextView) findViewById(R.id.textView5);
         displayPhone = (TextView) findViewById(R.id.textView4);
         displayEmail = (TextView) findViewById(R.id.textView3);
+        displayImage = (ImageView) findViewById(R.id.imageView);
 
+        verifyStoragePermissions(this);
 
         //init image
         image = BitmapFactory.decodeResource(getResources(), R.drawable.test_image3);
+        displayImage.setImageBitmap(image);
 
         //initialize Tesseract API
         String language = "eng";
@@ -78,6 +127,100 @@ public class MainActivity extends AppCompatActivity {
                 addToContacts();
             }
         });
+
+        //Take a photo...
+        takePhoto.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                openCamera();
+            }
+        });
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+
+        if (requestCode != REQUEST_TO_CAMERA) {
+            Log.d("錯誤", "不是拍照");
+            return;
+        }
+        if (resultCode != RESULT_OK) {
+            Log.e("錯誤", "拍照失敗");
+            return;
+        }
+        try {
+            Uri uri = Uri.fromFile(new File(Environment.getExternalStorageDirectory(), String.valueOf(timeSeed) + ".jpg"));
+            Log.d("名字", String.valueOf(timeSeed));
+
+            OpenCVLoader.initDebug();
+            Mat rgbMat = new Mat();
+            Mat grayMat = new Mat();
+            Bitmap srcBitmap = BitmapFactory.decodeFile(new File(Environment.getExternalStorageDirectory(), String.valueOf(timeSeed) + ".jpg").toString());
+            Bitmap grayBitmap = Bitmap.createBitmap(srcBitmap.getWidth(), srcBitmap.getHeight(), Bitmap.Config.RGB_565);
+            Utils.bitmapToMat(srcBitmap, rgbMat);//convert original bitmap to Mat, R G B.
+            Imgproc.cvtColor(rgbMat, grayMat, Imgproc.COLOR_RGB2GRAY);//rgbMat to gray grayMat
+            Utils.matToBitmap(grayMat, grayBitmap); //convert mat to bitmap
+
+            displayImage.setImageBitmap(grayBitmap);
+
+
+        } catch(Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        if (!OpenCVLoader.initDebug()) {
+            Log.d("CV Msg", "Internal OpenCV library not found. Using OpenCV Manager for initialization");
+            OpenCVLoader.initAsync(OpenCVLoader.OPENCV_VERSION_3_3_0, this, mLoaderCallback);
+        } else {
+            Log.d("CV Msg", "OpenCV library found inside package. Using it!");
+            mLoaderCallback.onManagerConnected(LoaderCallbackInterface.SUCCESS);
+        }
+    }
+
+    public static void verifyStoragePermissions(Activity activity) {
+        //Android6.0權限解決
+        try
+        {
+            //write is ok?
+            int write_permission = PermissionChecker.checkSelfPermission(activity,
+                    "android.permission.WRITE_EXTERNAL_STORAGE");
+            //camera is ok?
+            int camera_permission = PermissionChecker.checkSelfPermission(activity,
+                    "android.permission.CAMERA");
+            if (write_permission != PackageManager.PERMISSION_GRANTED)
+            {
+                //if no write permission, ask user
+                Log.d("ask write", "ask now");
+                ActivityCompat.requestPermissions(activity, PERMISSIONS_STORAGE, REQUEST_EXTERNAL_STORAGE);
+            }
+            else if(camera_permission != PackageManager.PERMISSION_GRANTED)
+            {
+                //if no camera permission, ask user
+                Log.d("ask camera", "ask now");
+                ActivityCompat.requestPermissions(activity, PERMISSIONS_CAMERA, REQUEST_CAMERA);
+            }
+        }
+        catch (Exception e)
+        {
+            e.printStackTrace();
+        }
+    }
+
+    public static Bitmap sharpen(Bitmap src, double weight) {
+        double[][] SharpConfig = new double[][] {
+                { 0 , -2    , 0  },
+                { -2, weight, -2 },
+                { 0 , -2    , 0  }
+        };
+        ConvolutionMatrix convMatrix = new ConvolutionMatrix(3);
+        convMatrix.applyConfig(SharpConfig);
+        convMatrix.Factor = weight - 8;
+        return ConvolutionMatrix.computeConvolution3x3(src, convMatrix);
     }
 
     public void processImage(){
@@ -167,7 +310,7 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    private void addToContacts(){
+    private void addToContacts() {
 
         // Creates a new Intent to insert a contact
         Intent intent = new Intent(ContactsContract.Intents.Insert.ACTION);
@@ -194,9 +337,24 @@ public class MainActivity extends AppCompatActivity {
         }else{
             Toast.makeText(getApplicationContext(), "No information to add to contacts!", Toast.LENGTH_LONG).show();
         }
-
-
     }
 
-
+    public void openCamera() {
+        Intent intent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
+        timeSeed = System.currentTimeMillis();
+        Log.d("名字", String.valueOf(timeSeed));
+        intent.putExtra(MediaStore.EXTRA_OUTPUT,
+                Uri.fromFile(new File(Environment.getExternalStorageDirectory(), String.valueOf(timeSeed) + ".jpg")));
+        if (Build.VERSION.SDK_INT >= 23) {
+            int checkCallPhonePermission = ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA);
+            if(checkCallPhonePermission != PackageManager.PERMISSION_GRANTED){
+                ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.CAMERA}, REQUEST_CAMERA);
+                return;
+            }else{
+                startActivityForResult(intent, REQUEST_TO_CAMERA);
+            }
+        } else {
+            startActivityForResult(intent, REQUEST_TO_CAMERA);
+        }
+    }
 }
