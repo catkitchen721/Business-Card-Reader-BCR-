@@ -24,6 +24,8 @@ import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.googlecode.leptonica.android.Pix;
+import com.googlecode.leptonica.android.ReadFile;
 import com.googlecode.tesseract.android.TessBaseAPI;
 
 import org.opencv.android.BaseLoaderCallback;
@@ -31,6 +33,7 @@ import org.opencv.android.LoaderCallbackInterface;
 import org.opencv.android.OpenCVLoader;
 import org.opencv.android.Utils;
 import org.opencv.core.Mat;
+import org.opencv.core.Size;
 import org.opencv.imgproc.Imgproc;
 import org.opencv.osgi.OpenCVInterface;
 import org.opencv.osgi.OpenCVNativeLoader;
@@ -59,6 +62,7 @@ public class MainActivity extends AppCompatActivity {
     Bitmap image;
     private TessBaseAPI mTess;
     String datapath = "";
+    String picturepath = "";
 
     long timeSeed = 0l;
 
@@ -103,9 +107,13 @@ public class MainActivity extends AppCompatActivity {
         image = BitmapFactory.decodeResource(getResources(), R.drawable.test_image3);
         displayImage.setImageBitmap(image);
 
+        //create picture folder
+        picturepath = Environment.getExternalStorageDirectory().getPath() + "/ocrPic/";
+        createFolder(new File(picturepath));
+
         //initialize Tesseract API
         String language = "eng";
-        datapath = getFilesDir()+ "/tesseract/";
+        datapath = getFilesDir() + "/tesseract/";
         mTess = new TessBaseAPI();
 
         checkFile(new File(datapath + "tessdata/"));
@@ -150,21 +158,25 @@ public class MainActivity extends AppCompatActivity {
             return;
         }
         try {
-            Uri uri = Uri.fromFile(new File(Environment.getExternalStorageDirectory(), String.valueOf(timeSeed) + ".jpg"));
+            Uri uri = Uri.fromFile(new File(picturepath, String.valueOf(timeSeed) + ".jpg"));
             Log.d("名字", String.valueOf(timeSeed));
 
             OpenCVLoader.initDebug();
             Mat rgbMat = new Mat();
             Mat grayMat = new Mat();
-            Bitmap srcBitmap = BitmapFactory.decodeFile(new File(Environment.getExternalStorageDirectory(), String.valueOf(timeSeed) + ".jpg").toString());
-            Bitmap grayBitmap = Bitmap.createBitmap(srcBitmap.getWidth(), srcBitmap.getHeight(), Bitmap.Config.RGB_565);
+            Mat newGrayMat = new Mat();
+            Bitmap srcBitmap = BitmapFactory.decodeFile(new File(picturepath, String.valueOf(timeSeed) + ".jpg").toString());
+            Bitmap grayBitmap = Bitmap.createBitmap(1164, 655, Bitmap.Config.ARGB_8888);
             Utils.bitmapToMat(srcBitmap, rgbMat);//convert original bitmap to Mat, R G B.
-            Imgproc.cvtColor(rgbMat, grayMat, Imgproc.COLOR_RGB2GRAY);//rgbMat to gray grayMat
-            Utils.matToBitmap(grayMat, grayBitmap); //convert mat to bitmap
+            //Imgproc.cvtColor(rgbMat, grayMat, Imgproc.COLOR_RGB2GRAY);//rgbMat to gray grayMat
+            Imgproc.pyrDown(rgbMat, grayMat, new Size(rgbMat.cols()*0.5, rgbMat.rows()*0.5));
+            Imgproc.pyrDown(grayMat, newGrayMat, new Size(grayMat.cols()*0.5, grayMat.rows()*0.5));
+            Log.d("矩陣大小", rgbMat.toString() + newGrayMat.toString());
+            Utils.matToBitmap(newGrayMat, grayBitmap); //convert mat to bitmap
 
             displayImage.setImageBitmap(grayBitmap);
-
-
+            //image = BitmapFactory.decodeResource(getResources(), R.drawable.test_image3);
+            image = grayBitmap;
         } catch(Exception e) {
             e.printStackTrace();
         }
@@ -226,6 +238,7 @@ public class MainActivity extends AppCompatActivity {
     public void processImage(){
         String OCRresult = null;
         mTess.setImage(image);
+
         OCRresult = mTess.getUTF8Text();
         //displayText.setText(OCRresult);
         extractName(OCRresult);
@@ -242,6 +255,9 @@ public class MainActivity extends AppCompatActivity {
             System.out.println(m.group());
             displayName.setText(m.group());
         }
+        else{
+            displayName.setText("");
+        }
     }
 
     public void extractEmail(String str) {
@@ -252,6 +268,9 @@ public class MainActivity extends AppCompatActivity {
         if(m.find()){
             System.out.println(m.group());
             displayEmail.setText(m.group());
+        }
+        else{
+            displayEmail.setText("");
         }
     }
 
@@ -264,11 +283,21 @@ public class MainActivity extends AppCompatActivity {
             System.out.println(m.group());
             displayPhone.setText(m.group());
         }
+        else{
+            displayPhone.setText("");
+        }
+    }
+
+    public void createFolder(File dir) {
+        //directory does not exist, we create it
+        if (!dir.exists()){
+            dir.mkdirs();
+        }
     }
 
     private void checkFile(File dir) {
         //directory does not exist, but we can successfully create it
-        if (!dir.exists()&& dir.mkdirs()){
+        if (!dir.exists() && dir.mkdirs()){
             copyFiles();
         }
         //The directory exists, but there is no data file in it
@@ -344,7 +373,7 @@ public class MainActivity extends AppCompatActivity {
         timeSeed = System.currentTimeMillis();
         Log.d("名字", String.valueOf(timeSeed));
         intent.putExtra(MediaStore.EXTRA_OUTPUT,
-                Uri.fromFile(new File(Environment.getExternalStorageDirectory(), String.valueOf(timeSeed) + ".jpg")));
+                Uri.fromFile(new File(picturepath, String.valueOf(timeSeed) + ".jpg")));
         if (Build.VERSION.SDK_INT >= 23) {
             int checkCallPhonePermission = ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA);
             if(checkCallPhonePermission != PackageManager.PERMISSION_GRANTED){
