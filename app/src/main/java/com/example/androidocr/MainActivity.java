@@ -164,19 +164,23 @@ public class MainActivity extends AppCompatActivity {
             OpenCVLoader.initDebug();
             Mat rgbMat = new Mat();
             Mat grayMat = new Mat();
-            Mat newGrayMat = new Mat();
+            Mat thsMat = new Mat();
+            Mat x05Mat = new Mat();
+            Mat x025Mat = new Mat();
             Bitmap srcBitmap = BitmapFactory.decodeFile(new File(picturepath, String.valueOf(timeSeed) + ".jpg").toString());
-            Bitmap grayBitmap = Bitmap.createBitmap(1164, 655, Bitmap.Config.ARGB_8888);
+            Bitmap x025Bitmap = Bitmap.createBitmap(1164, 655, Bitmap.Config.ARGB_8888);
             Utils.bitmapToMat(srcBitmap, rgbMat);//convert original bitmap to Mat, R G B.
-            //Imgproc.cvtColor(rgbMat, grayMat, Imgproc.COLOR_RGB2GRAY);//rgbMat to gray grayMat
-            Imgproc.pyrDown(rgbMat, grayMat, new Size(rgbMat.cols()*0.5, rgbMat.rows()*0.5));
-            Imgproc.pyrDown(grayMat, newGrayMat, new Size(grayMat.cols()*0.5, grayMat.rows()*0.5));
-            Log.d("矩陣大小", rgbMat.toString() + newGrayMat.toString());
-            Utils.matToBitmap(newGrayMat, grayBitmap); //convert mat to bitmap
+            Imgproc.cvtColor(rgbMat, grayMat, Imgproc.COLOR_RGB2GRAY);//rgbMat to gray grayMat
+            Imgproc.threshold(grayMat, thsMat, 155, 255, Imgproc.THRESH_TOZERO);
+            Imgproc.pyrDown(thsMat, x05Mat, new Size(rgbMat.cols()*0.5, rgbMat.rows()*0.5));
+            Imgproc.pyrDown(x05Mat, x025Mat, new Size(x05Mat.cols()*0.5, x05Mat.rows()*0.5));
+            Log.d("矩陣大小", rgbMat.toString() + x025Mat.toString());
+            Utils.matToBitmap(x025Mat, x025Bitmap); //convert mat to bitmap
 
-            displayImage.setImageBitmap(grayBitmap);
+            displayImage.setImageBitmap(x025Bitmap);
             //image = BitmapFactory.decodeResource(getResources(), R.drawable.test_image3);
-            image = grayBitmap;
+            image = x025Bitmap;
+
         } catch(Exception e) {
             e.printStackTrace();
         }
@@ -244,6 +248,7 @@ public class MainActivity extends AppCompatActivity {
         extractName(OCRresult);
         extractEmail(OCRresult);
         extractPhone(OCRresult);
+        System.out.println(OCRresult);
     }
 
     public void extractName(String str){
