@@ -21,6 +21,7 @@ import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
 import android.widget.ImageView;
+import android.widget.SeekBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -65,6 +66,7 @@ public class MainActivity extends AppCompatActivity {
     String picturepath = "";
 
     long timeSeed = 0l;
+    int threshold_value = 100;
 
     ImageView displayImage;
     TextView runOCR;
@@ -74,6 +76,7 @@ public class MainActivity extends AppCompatActivity {
     TextView displayName;
     TextView openContacts;
     TextView takePhoto;
+    SeekBar thresValue;
 
     private static final int REQUEST_EXTERNAL_STORAGE = 1;
     private static String[] PERMISSIONS_STORAGE = {
@@ -100,6 +103,8 @@ public class MainActivity extends AppCompatActivity {
         displayPhone = (TextView) findViewById(R.id.textView4);
         displayEmail = (TextView) findViewById(R.id.textView3);
         displayImage = (ImageView) findViewById(R.id.imageView);
+
+        thresValue = (SeekBar) findViewById(R.id.thresValue);
 
         verifyStoragePermissions(this);
 
@@ -143,6 +148,25 @@ public class MainActivity extends AppCompatActivity {
                 openCamera();
             }
         });
+
+        //Set SeekBar...
+        thresValue.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+            @Override
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean b) {
+                displayText.setText("Thres:" + progress + "  / 255 ");
+                threshold_value = progress;
+            }
+
+            @Override
+            public void onStartTrackingTouch(SeekBar seekBar) {
+
+            }
+
+            @Override
+            public void onStopTrackingTouch(SeekBar seekBar) {
+
+            }
+        });
     }
 
     @Override
@@ -167,11 +191,13 @@ public class MainActivity extends AppCompatActivity {
             Mat thsMat = new Mat();
             Mat x05Mat = new Mat();
             Mat x025Mat = new Mat();
+            Mat brightMat = new Mat();
             Bitmap srcBitmap = BitmapFactory.decodeFile(new File(picturepath, String.valueOf(timeSeed) + ".jpg").toString());
             Bitmap x025Bitmap = Bitmap.createBitmap(1164, 655, Bitmap.Config.ARGB_8888);
             Utils.bitmapToMat(srcBitmap, rgbMat);//convert original bitmap to Mat, R G B.
-            Imgproc.cvtColor(rgbMat, grayMat, Imgproc.COLOR_RGB2GRAY);//rgbMat to gray grayMat
-            Imgproc.threshold(grayMat, thsMat, 155, 255, Imgproc.THRESH_TOZERO);
+            rgbMat.convertTo(brightMat, -1, 1, 0);
+            Imgproc.cvtColor(brightMat, grayMat, Imgproc.COLOR_RGB2GRAY);//rgbMat to gray grayMat
+            Imgproc.threshold(grayMat, thsMat, threshold_value, 255, Imgproc.THRESH_TOZERO);
             Imgproc.pyrDown(thsMat, x05Mat, new Size(rgbMat.cols()*0.5, rgbMat.rows()*0.5));
             Imgproc.pyrDown(x05Mat, x025Mat, new Size(x05Mat.cols()*0.5, x05Mat.rows()*0.5));
             Log.d("矩陣大小", rgbMat.toString() + x025Mat.toString());
