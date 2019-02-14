@@ -33,7 +33,14 @@ import org.opencv.android.BaseLoaderCallback;
 import org.opencv.android.LoaderCallbackInterface;
 import org.opencv.android.OpenCVLoader;
 import org.opencv.android.Utils;
+import org.opencv.core.CvType;
 import org.opencv.core.Mat;
+import org.opencv.core.MatOfInt4;
+import org.opencv.core.MatOfPoint;
+import org.opencv.core.MatOfPoint2f;
+import org.opencv.core.Point;
+import org.opencv.core.RotatedRect;
+import org.opencv.core.Scalar;
 import org.opencv.core.Size;
 import org.opencv.imgproc.Imgproc;
 import org.opencv.osgi.OpenCVInterface;
@@ -45,8 +52,17 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.Vector;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
+import static org.opencv.core.CvType.CV_8U;
+import static org.opencv.imgproc.Imgproc.CHAIN_APPROX_SIMPLE;
+import static org.opencv.imgproc.Imgproc.MORPH_RECT;
+import static org.opencv.imgproc.Imgproc.RETR_CCOMP;
+import static org.opencv.imgproc.Imgproc.approxPolyDP;
+import static org.opencv.imgproc.Imgproc.getStructuringElement;
+import static org.opencv.imgproc.Imgproc.minAreaRect;
 
 public class MainActivity extends AppCompatActivity {
     static {
@@ -67,6 +83,10 @@ public class MainActivity extends AppCompatActivity {
 
     long timeSeed = 0l;
     int threshold_value = 100;
+    boolean nameSuccess = false;
+    boolean phoneSuccess = false;
+    boolean emailSuccess = false;
+    boolean recognitionSuccess = false;
 
     ImageView displayImage;
     TextView runOCR;
@@ -193,18 +213,25 @@ public class MainActivity extends AppCompatActivity {
             Mat x025Mat = new Mat();
             Mat brightMat = new Mat();
             Bitmap srcBitmap = BitmapFactory.decodeFile(new File(picturepath, String.valueOf(timeSeed) + ".jpg").toString());
-            Bitmap x025Bitmap = Bitmap.createBitmap(1164, 655, Bitmap.Config.ARGB_8888);
+            Bitmap x025Bitmap = Bitmap.createBitmap(srcBitmap.getWidth()/4, srcBitmap.getHeight()/4, Bitmap.Config.ARGB_8888);
             Utils.bitmapToMat(srcBitmap, rgbMat);//convert original bitmap to Mat, R G B.
+
+            /* Tempararyly remove bright function.
             rgbMat.convertTo(brightMat, -1, 1, 0);
-            Imgproc.cvtColor(brightMat, grayMat, Imgproc.COLOR_RGB2GRAY);//rgbMat to gray grayMat
+            */
+
+            /* Tempararyly remove threshold function.
             Imgproc.threshold(grayMat, thsMat, threshold_value, 255, Imgproc.THRESH_TOZERO);
-            Imgproc.pyrDown(thsMat, x05Mat, new Size(rgbMat.cols()*0.5, rgbMat.rows()*0.5));
+            */
+
+            detectText(rgbMat);  // Tag All Text Regions.
+
+            Imgproc.pyrDown(rgbMat, x05Mat, new Size(rgbMat.cols()*0.5, rgbMat.rows()*0.5));
             Imgproc.pyrDown(x05Mat, x025Mat, new Size(x05Mat.cols()*0.5, x05Mat.rows()*0.5));
             Log.d("矩陣大小", rgbMat.toString() + x025Mat.toString());
             Utils.matToBitmap(x025Mat, x025Bitmap); //convert mat to bitmap
 
             displayImage.setImageBitmap(x025Bitmap);
-            //image = BitmapFactory.decodeResource(getResources(), R.drawable.test_image3);
             image = x025Bitmap;
 
         } catch(Exception e) {
@@ -253,6 +280,7 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    // CV Function Region
     public static Bitmap sharpen(Bitmap src, double weight) {
         double[][] SharpConfig = new double[][] {
                 { 0 , -2    , 0  },
@@ -264,6 +292,86 @@ public class MainActivity extends AppCompatActivity {
         convMatrix.Factor = weight - 8;
         return ConvolutionMatrix.computeConvolution3x3(src, convMatrix);
     }
+
+    private Mat preprocessText(Mat grayMat) {
+        // Sobel, find border
+        Mat sbl = new Mat();
+        Imgproc.Sobel(grayMat, sbl, CV_8U, 1, 0, 3, 1, 0);
+
+        // Binary
+        Mat bi = new Mat();
+        Imgproc.threshold(sbl, bi, 0, 255, Imgproc.THRESH_OTSU + Imgproc.THRESH_BINARY);
+
+        Mat element1 = Imgproc.getStructuringElement(MORPH_RECT, new Size(30, 9));
+        Mat element2 = Imgproc.getStructuringElement(MORPH_RECT, new Size(24, 4));
+
+        // 1st dilate
+        Mat dlt1 = new Mat();
+        Imgproc.dilate(bi, dlt1, element2);
+
+        // 1st erode
+        Mat erd1 = new Mat();
+        Imgproc.erode(dlt1, erd1, element1);
+
+        // 2nd dilate
+        Mat dlt2 = new Mat();
+        Imgproc.dilate(erd1, dlt2, element2);
+
+        return  dlt2;
+    }
+
+    public void detectText(Mat rgbMat) {
+        Mat grayMat = new Mat();
+        Imgproc.cvtColor(rgbMat, grayMat, Imgproc.COLOR_RGB2GRAY);//rgbMat to gray grayMat
+
+        Mat dial = preprocessText(grayMat);
+
+        Vector<RotatedRect> rects = findTextRegion(dial);
+
+        for(int i=0;i<rects.size();i++)
+        {
+            Point P[] = new Point[4];
+            rects.get(i).points(P);
+            for(int j=0;j<4;j++)
+            {
+                Imgproc.line(rgbMat, P[j], P[(j + 1) % 4], new Scalar(0,255,0), 2);
+            }
+        }
+    }
+
+    private Vector<RotatedRect> findTextRegion(Mat ppedMat) {
+        Vector<RotatedRect> rects = new Vector<>();
+
+        // find contours
+        Vector<MatOfPoint> contours = new Vector<>();
+        MatOfPoint2f contours2f = new MatOfPoint2f();
+        MatOfInt4 hry = new MatOfInt4();
+        Imgproc.findContours(ppedMat, contours, hry, RETR_CCOMP, CHAIN_APPROX_SIMPLE, new Point(0, 0));
+
+        // find small area
+        for(int i=0;i<contours.size();i++)
+        {
+            double area = Imgproc.contourArea(contours.get(i));
+            if(area < 1000) continue;
+
+            contours.get(i).convertTo(contours2f, CvType.CV_32FC2);
+            double epsilon = 0.001 * Imgproc.arcLength(contours2f, true);
+            MatOfPoint2f approx = new MatOfPoint2f();
+            Imgproc.approxPolyDP(contours2f, approx, epsilon, true);
+
+            RotatedRect rect = Imgproc.minAreaRect(contours2f);
+
+            int m_width = rect.boundingRect().width;
+            int m_height = rect.boundingRect().height;
+
+            if (m_height > m_width * 1.2) continue;
+
+            rects.add(rect);
+        }
+
+        return  rects;
+    }
+    // CV Function Region
 
     public void processImage(){
         String OCRresult = null;
@@ -285,9 +393,12 @@ public class MainActivity extends AppCompatActivity {
         if(m.find()){
             System.out.println(m.group());
             displayName.setText(m.group());
+            nameSuccess = true;
         }
         else{
-            displayName.setText("");
+            displayName.setText("None Name");
+            nameSuccess = false;
+            recognitionSuccess = false;
         }
     }
 
@@ -299,9 +410,15 @@ public class MainActivity extends AppCompatActivity {
         if(m.find()){
             System.out.println(m.group());
             displayEmail.setText(m.group());
+            emailSuccess = true;
+            if(nameSuccess)
+            {
+                recognitionSuccess = true;
+            }
         }
         else{
-            displayEmail.setText("");
+            displayEmail.setText("None Email");
+            emailSuccess = false;
         }
     }
 
@@ -313,9 +430,15 @@ public class MainActivity extends AppCompatActivity {
         if(m.find()){
             System.out.println(m.group());
             displayPhone.setText(m.group());
+            phoneSuccess = true;
+            if(nameSuccess)
+            {
+                recognitionSuccess = true;
+            }
         }
         else{
-            displayPhone.setText("");
+            displayPhone.setText("None Phone");
+            phoneSuccess = false;
         }
     }
 
@@ -378,14 +501,14 @@ public class MainActivity extends AppCompatActivity {
         intent.setType(ContactsContract.RawContacts.CONTENT_TYPE);
 
         //Checks if we have the name, email and phone number...
-        if(displayName.getText().length() > 0 && ( displayPhone.getText().length() > 0 || displayEmail.getText().length() > 0 )){
+        if(recognitionSuccess){
             //Adds the name...
             intent.putExtra(ContactsContract.Intents.Insert.NAME, displayName.getText());
 
             //Adds the email...
             intent.putExtra(ContactsContract.Intents.Insert.EMAIL, displayEmail.getText());
             //Adds the email as Work Email
-            intent .putExtra(ContactsContract.Intents.Insert.EMAIL_TYPE, ContactsContract.CommonDataKinds.Email.TYPE_WORK);
+            intent.putExtra(ContactsContract.Intents.Insert.EMAIL_TYPE, ContactsContract.CommonDataKinds.Email.TYPE_WORK);
 
             //Adds the phone number...
             intent.putExtra(ContactsContract.Intents.Insert.PHONE, displayPhone.getText());
