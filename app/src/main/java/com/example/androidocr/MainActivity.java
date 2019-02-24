@@ -5,6 +5,7 @@ import android.app.Activity;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.content.res.AssetManager;
+import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.graphics.Color;
 import android.graphics.BitmapFactory;
@@ -39,6 +40,7 @@ import org.opencv.core.MatOfInt4;
 import org.opencv.core.MatOfPoint;
 import org.opencv.core.MatOfPoint2f;
 import org.opencv.core.Point;
+import org.opencv.core.Rect;
 import org.opencv.core.RotatedRect;
 import org.opencv.core.Scalar;
 import org.opencv.core.Size;
@@ -77,6 +79,7 @@ public class MainActivity extends AppCompatActivity {
     };
 
     Bitmap image;
+    Vector<Bitmap> croppedImages;
     private TessBaseAPI mTess;
     String datapath = "";
     String picturepath = "";
@@ -96,6 +99,7 @@ public class MainActivity extends AppCompatActivity {
     TextView displayName;
     TextView openContacts;
     TextView takePhoto;
+    TextView fromGallery;
     SeekBar thresValue;
 
     private static final int REQUEST_EXTERNAL_STORAGE = 1;
@@ -108,6 +112,7 @@ public class MainActivity extends AppCompatActivity {
             "android.permission.CAMERA" };
 
     private static final int REQUEST_TO_CAMERA = 15;
+    private static final int REQUEST_TO_GALLERY = 16;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -117,6 +122,7 @@ public class MainActivity extends AppCompatActivity {
         runOCR = (TextView) findViewById(R.id.textView);
         openContacts = (TextView) findViewById(R.id.textView6);
         takePhoto = (TextView) findViewById(R.id.textView7);
+        fromGallery = (TextView) findViewById(R.id.textView8);
 
         displayText = (TextView) findViewById(R.id.textView2);
         displayName = (TextView) findViewById(R.id.textView5);
@@ -169,6 +175,12 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
+        //Choose a photo from gallery...
+        fromGallery.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) { openGallery(); }
+        });
+
         //Set SeekBar...
         thresValue.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             @Override
@@ -193,7 +205,7 @@ public class MainActivity extends AppCompatActivity {
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
 
-        if (requestCode != REQUEST_TO_CAMERA) {
+        if (requestCode != REQUEST_TO_CAMERA && requestCode != REQUEST_TO_GALLERY) {
             Log.d("錯誤", "不是拍照");
             return;
         }
@@ -201,20 +213,21 @@ public class MainActivity extends AppCompatActivity {
             Log.e("錯誤", "拍照失敗");
             return;
         }
-        try {
-            Uri uri = Uri.fromFile(new File(picturepath, String.valueOf(timeSeed) + ".jpg"));
-            Log.d("名字", String.valueOf(timeSeed));
+        if (requestCode == REQUEST_TO_CAMERA) {
+            try {
+                Uri uri = Uri.fromFile(new File(picturepath, String.valueOf(timeSeed) + ".jpg"));
+                Log.d("名字", String.valueOf(timeSeed));
 
-            OpenCVLoader.initDebug();
-            Mat rgbMat = new Mat();
-            Mat grayMat = new Mat();
-            Mat thsMat = new Mat();
-            Mat x05Mat = new Mat();
-            Mat x025Mat = new Mat();
-            Mat brightMat = new Mat();
-            Bitmap srcBitmap = BitmapFactory.decodeFile(new File(picturepath, String.valueOf(timeSeed) + ".jpg").toString());
-            Bitmap x025Bitmap = Bitmap.createBitmap(srcBitmap.getWidth()/4, srcBitmap.getHeight()/4, Bitmap.Config.ARGB_8888);
-            Utils.bitmapToMat(srcBitmap, rgbMat);//convert original bitmap to Mat, R G B.
+                OpenCVLoader.initDebug();
+                Mat rgbMat = new Mat();
+                //Mat grayMat = new Mat();
+                //Mat thsMat = new Mat();
+                Mat x05Mat = new Mat();
+                Mat x025Mat = new Mat();
+                //Mat brightMat = new Mat();
+                Bitmap srcBitmap = BitmapFactory.decodeFile(new File(picturepath, String.valueOf(timeSeed) + ".jpg").toString());
+                Bitmap x025Bitmap = Bitmap.createBitmap(srcBitmap.getWidth()/4, srcBitmap.getHeight()/4, Bitmap.Config.ARGB_8888);
+                Utils.bitmapToMat(srcBitmap, rgbMat);//convert original bitmap to Mat, R G B.
 
             /* Tempararyly remove bright function.
             rgbMat.convertTo(brightMat, -1, 1, 0);
@@ -224,18 +237,56 @@ public class MainActivity extends AppCompatActivity {
             Imgproc.threshold(grayMat, thsMat, threshold_value, 255, Imgproc.THRESH_TOZERO);
             */
 
-            detectText(rgbMat);  // Tag All Text Regions.
+                croppedImages = detectText(rgbMat);  // Tag All Text Regions.
 
-            Imgproc.pyrDown(rgbMat, x05Mat, new Size(rgbMat.cols()*0.5, rgbMat.rows()*0.5));
-            Imgproc.pyrDown(x05Mat, x025Mat, new Size(x05Mat.cols()*0.5, x05Mat.rows()*0.5));
-            Log.d("矩陣大小", rgbMat.toString() + x025Mat.toString());
-            Utils.matToBitmap(x025Mat, x025Bitmap); //convert mat to bitmap
+                Imgproc.pyrDown(rgbMat, x05Mat, new Size(rgbMat.cols()*0.5, rgbMat.rows()*0.5));
+                Imgproc.pyrDown(x05Mat, x025Mat, new Size(x05Mat.cols()*0.5, x05Mat.rows()*0.5));
+                Log.d("矩陣大小", rgbMat.toString() + x025Mat.toString());
+                Utils.matToBitmap(x025Mat, x025Bitmap); //convert mat to bitmap
 
-            displayImage.setImageBitmap(x025Bitmap);
-            image = x025Bitmap;
+                displayImage.setImageBitmap(x025Bitmap);
+                image = x025Bitmap;
 
-        } catch(Exception e) {
-            e.printStackTrace();
+            } catch(Exception e) {
+                e.printStackTrace();
+            }
+        }
+        if (requestCode == REQUEST_TO_GALLERY) {
+            Log.d("拍照正常", "是");
+            try {
+                Uri selectedImage = data.getData();
+                String[] filePathColumn = {
+                        MediaStore.Images.Media.DATA
+                };
+                String path;
+                Cursor cursor = getContentResolver().query(selectedImage,
+                        filePathColumn, null, null, null);
+                cursor.moveToFirst();
+                int columnIndex = cursor.getColumnIndex(filePathColumn[0]);
+                path = cursor.getString(columnIndex);
+                cursor.close();
+                Bitmap srcBitmap = BitmapFactory.decodeFile(path);
+                Bitmap x025Bitmap = Bitmap.createBitmap(srcBitmap.getWidth()/4, srcBitmap.getHeight()/4, Bitmap.Config.ARGB_8888);
+
+                Mat rgbMat = new Mat();
+                Mat x05Mat = new Mat();
+                Mat x025Mat = new Mat();
+
+                Utils.bitmapToMat(srcBitmap, rgbMat);//convert original bitmap to Mat, R G B.
+
+                croppedImages = detectText(rgbMat);  // Tag All Text Regions.
+
+                Imgproc.pyrDown(rgbMat, x05Mat, new Size(rgbMat.cols()*0.5, rgbMat.rows()*0.5));
+                Imgproc.pyrDown(x05Mat, x025Mat, new Size(x05Mat.cols()*0.5, x05Mat.rows()*0.5));
+                Log.d("矩陣大小", rgbMat.toString() + x025Mat.toString());
+                Utils.matToBitmap(x025Mat, x025Bitmap); //convert mat to bitmap
+
+                displayImage.setImageBitmap(x025Bitmap);
+                image = x025Bitmap;
+
+            } catch(Exception e) {
+                e.printStackTrace();
+            }
         }
     }
 
@@ -302,25 +353,16 @@ public class MainActivity extends AppCompatActivity {
         Mat bi = new Mat();
         Imgproc.threshold(sbl, bi, 0, 255, Imgproc.THRESH_OTSU + Imgproc.THRESH_BINARY);
 
-        Mat element1 = Imgproc.getStructuringElement(MORPH_RECT, new Size(30, 9));
-        Mat element2 = Imgproc.getStructuringElement(MORPH_RECT, new Size(24, 4));
+        Mat element1 = Imgproc.getStructuringElement(MORPH_RECT, new Size(45, 12));
 
         // 1st dilate
         Mat dlt1 = new Mat();
-        Imgproc.dilate(bi, dlt1, element2);
+        Imgproc.dilate(bi, dlt1, element1);
 
-        // 1st erode
-        Mat erd1 = new Mat();
-        Imgproc.erode(dlt1, erd1, element1);
-
-        // 2nd dilate
-        Mat dlt2 = new Mat();
-        Imgproc.dilate(erd1, dlt2, element2);
-
-        return  dlt2;
+        return  dlt1;
     }
 
-    public void detectText(Mat rgbMat) {
+    public Vector<Bitmap> detectText(Mat rgbMat) {
         Mat grayMat = new Mat();
         Imgproc.cvtColor(rgbMat, grayMat, Imgproc.COLOR_RGB2GRAY);//rgbMat to gray grayMat
 
@@ -328,15 +370,26 @@ public class MainActivity extends AppCompatActivity {
 
         Vector<RotatedRect> rects = findTextRegion(dial);
 
+        Vector<Bitmap> brectsBitmap = new Vector<>();
+
         for(int i=0;i<rects.size();i++)
         {
-            Point P[] = new Point[4];
+            /*Point P[] = new Point[4];
             rects.get(i).points(P);
             for(int j=0;j<4;j++)
             {
                 Imgproc.line(rgbMat, P[j], P[(j + 1) % 4], new Scalar(0,255,0), 2);
-            }
+            }*/
+            Imgproc.rectangle(rgbMat, rects.get(i).boundingRect().tl(), rects.get(i).boundingRect().br(), new Scalar(255,0,0), 2);
+            /*Mat imgDesc = new Mat(rects.get(i).boundingRect().height, rects.get(i).boundingRect().width, CvType.CV_8U);
+            Mat imgROI = new Mat(rgbMat, rects.get(i).boundingRect());
+
+            imgROI.copyTo(imgDesc);
+            Bitmap imgDescBitmap = Bitmap.createBitmap(imgDesc.width(), imgDesc.height(), Bitmap.Config.ARGB_8888);
+            brectsBitmap.add(imgDescBitmap);*/
         }
+
+        return brectsBitmap;
     }
 
     private Vector<RotatedRect> findTextRegion(Mat ppedMat) {
@@ -352,7 +405,7 @@ public class MainActivity extends AppCompatActivity {
         for(int i=0;i<contours.size();i++)
         {
             double area = Imgproc.contourArea(contours.get(i));
-            if(area < 1000) continue;
+            if(area < 15000) continue;  //temp 15000
 
             contours.get(i).convertTo(contours2f, CvType.CV_32FC2);
             double epsilon = 0.001 * Imgproc.arcLength(contours2f, true);
@@ -424,7 +477,9 @@ public class MainActivity extends AppCompatActivity {
 
     public void extractPhone(String str){
         System.out.println("Getting Phone Number");
-        final String PHONE_REGEX="(?:^|\\D)(\\d{3})[)\\-. ]*?(\\d{3})[\\-. ]*?(\\d{4})(?:$|\\D)";
+        //final String PHONE_REGEX="(?:^|\\D)(\\d{3})[)\\-. ]*?(\\d{3})[\\-. ]*?(\\d{4})(?:$|\\D)";
+        final String PHONE_REGEX="\\(?\\d{2,3}\\)?[\\s\\-]?\\d{3,4}[\\s\\-]?\\d{4}";
+
         Pattern p = Pattern.compile(PHONE_REGEX, Pattern.MULTILINE);
         Matcher m = p.matcher(str);   // get a matcher object
         if(m.find()){
@@ -538,6 +593,27 @@ public class MainActivity extends AppCompatActivity {
             }
         } else {
             startActivityForResult(intent, REQUEST_TO_CAMERA);
+        }
+    }
+
+    public void openGallery() {
+        Intent intent = new Intent(
+                Intent.ACTION_PICK,
+                android.provider.MediaStore.Images.Media.EXTERNAL_CONTENT_URI);
+        if (Build.VERSION.SDK_INT >= 23) {
+            int checkCallPhonePermission = ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE);
+            if(checkCallPhonePermission != PackageManager.PERMISSION_GRANTED){
+                Log.d("權限問題", "是");
+                ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.READ_EXTERNAL_STORAGE}, REQUEST_EXTERNAL_STORAGE);
+                Log.d("權限問題", "是");
+                return;
+            }else{
+                Log.d("權限問題", "否");
+                startActivityForResult(intent, REQUEST_TO_GALLERY);
+            }
+        } else {
+            Log.d("權限問題", "否");
+            startActivityForResult(intent, REQUEST_TO_GALLERY);
         }
     }
 }

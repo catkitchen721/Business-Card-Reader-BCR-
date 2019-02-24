@@ -31,7 +31,7 @@
 
         <TextView
             android:id="@+id/textView7"
-            android:layout_width="88dp"
+            android:layout_width="match_parent"
             android:layout_height="40dp"
             android:layout_gravity="center_horizontal"
             android:layout_margin="4dp"
@@ -42,18 +42,30 @@
             tools:text="Take Photo" />
 
         <TextView
-            android:id="@+id/textView"
-            android:layout_width="88dp"
+            android:id="@+id/textView8"
+            android:layout_width="match_parent"
             android:layout_height="40dp"
             android:layout_gravity="center_horizontal"
             android:layout_margin="4dp"
             android:layout_weight="1"
             android:background="#167865"
             android:gravity="center"
-            android:text="Run OCR!"
-            tools:text="Run OCR!" />
+            android:text="From Gallery"
+            tools:text="From Gallery" />
 
     </LinearLayout>
+
+    <TextView
+        android:id="@+id/textView"
+        android:layout_width="match_parent"
+        android:layout_height="40dp"
+        android:layout_gravity="center_horizontal"
+        android:layout_margin="4dp"
+        android:layout_weight="1"
+        android:background="#167865"
+        android:gravity="center"
+        android:text="Run OCR!"
+        tools:text="Run OCR!" />
 
     <SeekBar
         android:id="@+id/thresValue"
