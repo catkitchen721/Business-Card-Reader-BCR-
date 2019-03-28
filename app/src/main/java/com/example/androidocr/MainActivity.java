@@ -14,13 +14,17 @@ import android.os.Build;
 import android.os.Environment;
 import android.provider.ContactsContract;
 import android.provider.MediaStore;
+import android.support.annotation.NonNull;
+import android.support.annotation.Nullable;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.support.v4.content.PermissionChecker;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.Display;
 import android.view.View;
+import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.SeekBar;
 import android.widget.TextView;
@@ -54,15 +58,21 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Vector;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import static org.opencv.core.CvType.CV_8U;
+import static org.opencv.core.CvType.CV_8UC3;
 import static org.opencv.imgproc.Imgproc.CHAIN_APPROX_SIMPLE;
+import static org.opencv.imgproc.Imgproc.COLOR_BGRA2RGB;
+import static org.opencv.imgproc.Imgproc.COLOR_RGB2GRAY;
 import static org.opencv.imgproc.Imgproc.MORPH_RECT;
 import static org.opencv.imgproc.Imgproc.RETR_CCOMP;
 import static org.opencv.imgproc.Imgproc.approxPolyDP;
+import static org.opencv.imgproc.Imgproc.erode;
 import static org.opencv.imgproc.Imgproc.getStructuringElement;
 import static org.opencv.imgproc.Imgproc.minAreaRect;
 
@@ -78,11 +88,19 @@ public class MainActivity extends AppCompatActivity {
         }
     };
 
+    Mat LineMat;
+    Mat dilaMat;
+    Mat gMat;
+    Mat sobelMat;
     Bitmap image;
     Vector<Bitmap> croppedImages;
+    Vector<Rect> TextRects  = new Vector<>(); //存放各個文字框
+    Vector<Mat> ROIs = new Vector<>(); //用TextRects配合原圖 擷取出每個方框 存在ROIs
+    Point[] pts ;
     private TessBaseAPI mTess;
     String datapath = "";
     String picturepath = "";
+    String trainLan = "";
 
     long timeSeed = 0l;
     int threshold_value = 100;
@@ -94,12 +112,13 @@ public class MainActivity extends AppCompatActivity {
     ImageView displayImage;
     TextView runOCR;
     TextView displayText;
-    TextView displayEmail;
-    TextView displayPhone;
-    TextView displayName;
+    EditText displayEmail;
+    EditText displayPhone;
+    EditText displayName;
     TextView openContacts;
     TextView takePhoto;
     TextView fromGallery;
+    TextView toExcel;
     SeekBar thresValue;
 
     private static final int REQUEST_EXTERNAL_STORAGE = 1;
@@ -123,16 +142,33 @@ public class MainActivity extends AppCompatActivity {
         openContacts = (TextView) findViewById(R.id.textView6);
         takePhoto = (TextView) findViewById(R.id.textView7);
         fromGallery = (TextView) findViewById(R.id.textView8);
+        toExcel = (TextView) findViewById(R.id.textView9);
 
         displayText = (TextView) findViewById(R.id.textView2);
-        displayName = (TextView) findViewById(R.id.textView5);
-        displayPhone = (TextView) findViewById(R.id.textView4);
-        displayEmail = (TextView) findViewById(R.id.textView3);
+        displayName = (EditText) findViewById(R.id.textView5);
+        displayPhone = (EditText) findViewById(R.id.textView4);
+        displayEmail = (EditText) findViewById(R.id.textView3);
         displayImage = (ImageView) findViewById(R.id.imageView);
 
         thresValue = (SeekBar) findViewById(R.id.thresValue);
 
+        LineMat = new Mat();
+        dilaMat = new Mat();
+        gMat = new Mat();
+        sobelMat = new Mat();
+
         verifyStoragePermissions(this);
+
+        //lock texts
+        displayName.setFocusable(false);
+        displayName.setEnabled(false);
+        displayName.setFocusableInTouchMode(false);
+        displayPhone.setFocusable(false);
+        displayPhone.setEnabled(false);
+        displayPhone.setFocusableInTouchMode(false);
+        displayEmail.setFocusable(false);
+        displayEmail.setEnabled(false);
+        displayEmail.setFocusableInTouchMode(false);
 
         //init image
         image = BitmapFactory.decodeResource(getResources(), R.drawable.test_image3);
@@ -144,6 +180,7 @@ public class MainActivity extends AppCompatActivity {
 
         //initialize Tesseract API
         String language = "eng";
+        trainLan = "tessdata/"+language+".traineddata";
         datapath = getFilesDir() + "/tesseract/";
         mTess = new TessBaseAPI();
 
@@ -179,6 +216,11 @@ public class MainActivity extends AppCompatActivity {
         fromGallery.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) { openGallery(); }
+        });
+
+        toExcel.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) { toExcel(); }
         });
 
         //Set SeekBar...
@@ -226,6 +268,7 @@ public class MainActivity extends AppCompatActivity {
                 Mat x025Mat = new Mat();
                 //Mat brightMat = new Mat();
                 Bitmap srcBitmap = BitmapFactory.decodeFile(new File(picturepath, String.valueOf(timeSeed) + ".jpg").toString());
+                Bitmap dstBitmap = Bitmap.createBitmap(srcBitmap.getWidth(), srcBitmap.getHeight(), Bitmap.Config.RGB_565);
                 Bitmap x025Bitmap = Bitmap.createBitmap(srcBitmap.getWidth()/4, srcBitmap.getHeight()/4, Bitmap.Config.ARGB_8888);
                 Utils.bitmapToMat(srcBitmap, rgbMat);//convert original bitmap to Mat, R G B.
 
@@ -237,12 +280,13 @@ public class MainActivity extends AppCompatActivity {
             Imgproc.threshold(grayMat, thsMat, threshold_value, 255, Imgproc.THRESH_TOZERO);
             */
 
-                croppedImages = detectText(rgbMat);  // Tag All Text Regions.
+                detectText(rgbMat);  // Tag All Text Regions.
 
                 Imgproc.pyrDown(rgbMat, x05Mat, new Size(rgbMat.cols()*0.5, rgbMat.rows()*0.5));
                 Imgproc.pyrDown(x05Mat, x025Mat, new Size(x05Mat.cols()*0.5, x05Mat.rows()*0.5));
                 Log.d("矩陣大小", rgbMat.toString() + x025Mat.toString());
                 Utils.matToBitmap(x025Mat, x025Bitmap); //convert mat to bitmap
+                Utils.matToBitmap(rgbMat, dstBitmap); //convert mat to bitmap
 
                 displayImage.setImageBitmap(x025Bitmap);
                 image = x025Bitmap;
@@ -265,24 +309,65 @@ public class MainActivity extends AppCompatActivity {
                 int columnIndex = cursor.getColumnIndex(filePathColumn[0]);
                 path = cursor.getString(columnIndex);
                 cursor.close();
+
                 Bitmap srcBitmap = BitmapFactory.decodeFile(path);
-                Bitmap x025Bitmap = Bitmap.createBitmap(srcBitmap.getWidth()/4, srcBitmap.getHeight()/4, Bitmap.Config.ARGB_8888);
+
+                Bitmap dstBitmap = Bitmap.createBitmap(srcBitmap.getWidth(), srcBitmap.getHeight(), Bitmap.Config.RGB_565);
+                //    Bitmap x025Bitmap = Bitmap.createBitmap(srcBitmap.getWidth()/4, srcBitmap.getHeight()/4, Bitmap.Config.RGB_565);
+
+                image = srcBitmap;
+
 
                 Mat rgbMat = new Mat();
+                Mat dstMat = new Mat();
+                Mat grayMat = new Mat();
                 Mat x05Mat = new Mat();
                 Mat x025Mat = new Mat();
 
+
                 Utils.bitmapToMat(srcBitmap, rgbMat);//convert original bitmap to Mat, R G B.
 
-                croppedImages = detectText(rgbMat);  // Tag All Text Regions.
+     /*           Imgproc.cvtColor(rgbMat, grayMat, Imgproc.COLOR_RGB2GRAY);
+                Imgproc.bilateralFilter(grayMat,dstMat,5,30,30);
+                Imgproc.cvtColor(grayMat,rgbMat,Imgproc.COLOR_GRAY2RGB);*/
 
-                Imgproc.pyrDown(rgbMat, x05Mat, new Size(rgbMat.cols()*0.5, rgbMat.rows()*0.5));
-                Imgproc.pyrDown(x05Mat, x025Mat, new Size(x05Mat.cols()*0.5, x05Mat.rows()*0.5));
-                Log.d("矩陣大小", rgbMat.toString() + x025Mat.toString());
-                Utils.matToBitmap(x025Mat, x025Bitmap); //convert mat to bitmap
 
-                displayImage.setImageBitmap(x025Bitmap);
-                image = x025Bitmap;
+
+                detectText(rgbMat);  // Tag All Text Regions.
+
+                //    Imgproc.pyrDown(rgbMat, x05Mat, new Size(rgbMat.cols()*0.5, rgbMat.rows()*0.5));
+                //  Imgproc.pyrDown(x05Mat, x025Mat, new Size(x05Mat.cols()*0.5, x05Mat.rows()*0.5));
+                //   Log.d("矩陣大小", rgbMat.toString() + x025Mat.toString());
+                //    Utils.matToBitmap(x025Mat, x025Bitmap); //convert mat to bitmap
+
+
+                dstBitmap = Bitmap.createBitmap(srcBitmap.getWidth(), srcBitmap.getHeight(), Bitmap.Config.ARGB_8888);
+
+                int mode = 0;
+                if(mode == 0) {
+                    Utils.matToBitmap(rgbMat, dstBitmap);
+                }else if(mode == 1) {
+                    Utils.matToBitmap(LineMat, dstBitmap);
+                }else if(mode == 2) {
+                    Utils.matToBitmap(dilaMat, dstBitmap);
+                }else if(mode == 3) {
+                    Utils.matToBitmap(gMat, dstBitmap);
+                }else if(mode == 4){
+                    Utils.matToBitmap(sobelMat, dstBitmap);
+                }
+
+                System.out.println(ROIs.size() + "個\n");
+                displayImage.setImageBitmap(dstBitmap);
+                image = dstBitmap;
+
+
+/*
+                dstBitmap = Bitmap.createBitmap(ROIs.get(4).width(), ROIs.get(4).height(), Bitmap.Config.ARGB_8888);
+                Utils.matToBitmap(ROIs.get(4), dstBitmap); //convert mat to bitmap
+                System.out.println(ROIs.size());
+                displayImage.setImageBitmap(dstBitmap);
+*/
+
 
             } catch(Exception e) {
                 e.printStackTrace();
@@ -332,115 +417,277 @@ public class MainActivity extends AppCompatActivity {
     }
 
     // CV Function Region
-    public static Bitmap sharpen(Bitmap src, double weight) {
-        double[][] SharpConfig = new double[][] {
-                { 0 , -2    , 0  },
-                { -2, weight, -2 },
-                { 0 , -2    , 0  }
-        };
-        ConvolutionMatrix convMatrix = new ConvolutionMatrix(3);
-        convMatrix.applyConfig(SharpConfig);
-        convMatrix.Factor = weight - 8;
-        return ConvolutionMatrix.computeConvolution3x3(src, convMatrix);
+    public Mat blur(Mat rgbMat){
+        Mat dstMat = new Mat();
+        Mat aaMat = new Mat();
+
+        Imgproc.cvtColor(rgbMat,aaMat,COLOR_RGB2GRAY);
+        Imgproc.bilateralFilter(aaMat,dstMat,300,200,200);
+        rgbMat = dstMat.clone();
+        return rgbMat;
     }
 
-    private Mat preprocessText(Mat grayMat) {
-        // Sobel, find border
-        Mat sbl = new Mat();
-        Imgproc.Sobel(grayMat, sbl, CV_8U, 1, 0, 3, 1, 0);
-
-        // Binary
-        Mat bi = new Mat();
-        Imgproc.threshold(sbl, bi, 0, 255, Imgproc.THRESH_OTSU + Imgproc.THRESH_BINARY);
-
-        Mat element1 = Imgproc.getStructuringElement(MORPH_RECT, new Size(45, 12));
-
-        // 1st dilate
-        Mat dlt1 = new Mat();
-        Imgproc.dilate(bi, dlt1, element1);
-
-        return  dlt1;
-    }
-
-    public Vector<Bitmap> detectText(Mat rgbMat) {
+    public Mat detectText(Mat rgbMat) {
         Mat grayMat = new Mat();
+        Mat grayMat_equalizeHist = new Mat();
         Imgproc.cvtColor(rgbMat, grayMat, Imgproc.COLOR_RGB2GRAY);//rgbMat to gray grayMat
-
+ /*      Imgproc.equalizeHist(grayMat,grayMat_equalizeHist);
+        Mat dial = preprocessText(grayMat_equalizeHist);*/
+        gMat = grayMat.clone();
         Mat dial = preprocessText(grayMat);
+        Bitmap dstBitmap;
+        dstBitmap = Bitmap.createBitmap(rgbMat.width(), rgbMat.height(), Bitmap.Config.ARGB_8888);
 
         Vector<RotatedRect> rects = findTextRegion(dial);
+        Utils.matToBitmap(dial, dstBitmap);
+        //印出 dilate 後的圖
+        //      displayImage.setImageBitmap(dstBitmap);
+        dilaMat = dial.clone();
+        Log.d("做完沒", "做完了");
+        //  Vector<Bitmap> brectsBitmap = new Vector<>();
 
-        Vector<Bitmap> brectsBitmap = new Vector<>();
-
-        for(int i=0;i<rects.size();i++)
+        /*for(int i=0;i<rects.size();i++)
         {
-            /*Point P[] = new Point[4];
+            *//*Point P[] = new Point[4];
             rects.get(i).points(P);
             for(int j=0;j<4;j++)
             {
                 Imgproc.line(rgbMat, P[j], P[(j + 1) % 4], new Scalar(0,255,0), 2);
-            }*/
-            Imgproc.rectangle(rgbMat, rects.get(i).boundingRect().tl(), rects.get(i).boundingRect().br(), new Scalar(255,0,0), 2);
-            /*Mat imgDesc = new Mat(rects.get(i).boundingRect().height, rects.get(i).boundingRect().width, CvType.CV_8U);
+            }*//*
+            Imgproc.rectangle(rgbMat, rects.get(i).boundingRect().tl(), rects.get(i).boundingRect().br(), new Scalar(0,255,0), 2);
+            *//*Mat imgDesc = new Mat(rects.get(i).boundingRect().height, rects.get(i).boundingRect().width, CvType.CV_8U);
             Mat imgROI = new Mat(rgbMat, rects.get(i).boundingRect());
-
             imgROI.copyTo(imgDesc);
             Bitmap imgDescBitmap = Bitmap.createBitmap(imgDesc.width(), imgDesc.height(), Bitmap.Config.ARGB_8888);
-            brectsBitmap.add(imgDescBitmap);*/
+            brectsBitmap.add(imgDescBitmap);*//*
+        }*/
+
+        // 在rects這個Vector<RotatedRect>中 訪問每個element並畫出邊線框
+
+        LineMat = rgbMat.clone();
+        for(RotatedRect rect : rects){
+            org.opencv.core.Point[] P = new org.opencv.core.Point[4];
+            rect.points(P);
+            for(int j = 0 ; j <= 3; j++){
+                Imgproc.line(LineMat,P[j],P[(j+1)%4], new Scalar(255,0,0,255),2);
+            }
         }
 
-        return brectsBitmap;
+
+        Log.d("畫線", "畫完了");
+        //在TextRects這個Vector<Rect>中 用每一個element從原圖中擷取ROI區域 並放進ROIs這個Vector<Mat>中
+        for(Rect rect : TextRects){
+            if(rect.x + rect.width > rgbMat.cols())
+                continue;
+            if(rect.y + rect.height > rgbMat.rows())
+                continue;
+            Mat roi_img = new Mat(rgbMat,rect);
+            ROIs.add(roi_img);
+        }
+        Log.d("ROI做完沒", "做完了");
+
+        return rgbMat;
     }
 
-    private Vector<RotatedRect> findTextRegion(Mat ppedMat) {
-        Vector<RotatedRect> rects = new Vector<>();
+    private Mat preprocessText(Mat gray) {
+        // Sobel, find border
+  /*      Mat sbl = new Mat();
+        Imgproc.Sobel(grayMat, sbl, CV_8U, 1, 0, 3, 1, 0);
+        // Binary
+        Mat bi = new Mat();
+        Imgproc.threshold(sbl, bi, 0, 255, Imgproc.THRESH_OTSU + Imgproc.THRESH_BINARY);
+        Mat element1 = Imgproc.getStructuringElement(MORPH_RECT, new Size(45, 12));
+        // 1st dilate
+        Mat dlt1 = new Mat();
+        Imgproc.dilate(bi, dlt1, element1);
+        return  dlt1;*/
+        Mat sobel = new Mat();
+        Imgproc.Sobel(gray, sobel, CvType.CV_8U,1, 0, 3,1, 0);
+        sobelMat = sobel.clone();
 
+        //////////// See the Sobel /////////////
+       /* Bitmap dstBitmap;
+        dstBitmap = Bitmap.createBitmap(gray.width(), gray.height(), Bitmap.Config.ARGB_8888);
+        Utils.matToBitmap(sobel, dstBitmap);
+        displayImage.setImageBitmap(dstBitmap);*/
+        //////////////////////////////////////////
+
+        Mat binary = new Mat();
+        Imgproc.threshold(sobel, binary, 0, 255, Imgproc.THRESH_OTSU + Imgproc.THRESH_BINARY);
+        final Point anchor = new Point(-1, -1);
+        final int iterations = 1;
+        /*final Size kernelSize1 = new Size(30, 9);
+        final Size kernelSize2 = new Size(24, 4);*/
+/*
+        final Size kernelSize1 = new Size(15, 7);
+        final Size kernelSize2 = new Size(20, 5);
+        final Size kernelSize3 = new Size(20,7);
+        */
+ /*       final Size kernelSize1 = new Size(20, 8);
+        final Size kernelSize2 = new Size(15, 12);
+        final Size kernelSize3 = new Size(10,9);*/
+
+        final Size kernelSize1 = new Size(20, 8);
+        final Size kernelSize2 = new Size(24, 7);
+        final Size kernelSize3 = new Size(10,9);
+
+        Mat element1 = Imgproc.getStructuringElement(Imgproc.MORPH_RECT, kernelSize1);
+        Mat element2 = Imgproc.getStructuringElement(Imgproc.MORPH_RECT, kernelSize2);
+        Mat element3 = Imgproc.getStructuringElement(Imgproc.MORPH_RECT, kernelSize3);
+
+        Mat dilate1 = new Mat();
+        Imgproc.dilate(binary,dilate1,element1);
+
+
+        Mat erode1 = new Mat();
+        Imgproc.erode(dilate1,erode1,element2);
+
+        Mat dilate2 = new Mat();
+        Imgproc.dilate(erode1,dilate2,element3,anchor,iterations);
+
+
+
+
+        return dilate2;
+    }
+
+    private Vector<RotatedRect> findTextRegion(Mat img) {
+    /*    Vector<RotatedRect> rects = new Vector<>();
         // find contours
         Vector<MatOfPoint> contours = new Vector<>();
         MatOfPoint2f contours2f = new MatOfPoint2f();
         MatOfInt4 hry = new MatOfInt4();
         Imgproc.findContours(ppedMat, contours, hry, RETR_CCOMP, CHAIN_APPROX_SIMPLE, new Point(0, 0));
-
         // find small area
         for(int i=0;i<contours.size();i++)
         {
             double area = Imgproc.contourArea(contours.get(i));
             if(area < 15000) continue;  //temp 15000
-
             contours.get(i).convertTo(contours2f, CvType.CV_32FC2);
             double epsilon = 0.001 * Imgproc.arcLength(contours2f, true);
             MatOfPoint2f approx = new MatOfPoint2f();
             Imgproc.approxPolyDP(contours2f, approx, epsilon, true);
-
             RotatedRect rect = Imgproc.minAreaRect(contours2f);
+            int m_width = rect.boundingRect().width;
+            int m_height = rect.boundingRect().height;
+            if (m_height > m_width * 1.2) continue;
+            rects.add(rect);
+        }
+        return  rects;*/
+        Vector<RotatedRect> rects = new Vector<>();
+        List<MatOfPoint> contours = new ArrayList<>();
+        Imgproc.findContours(img, contours, new Mat(), Imgproc.RETR_EXTERNAL,Imgproc.CHAIN_APPROX_SIMPLE);
+        //因為minAreaRect裡的parameter吃的是MatOfPoint2f
+        List<org.opencv.core.MatOfPoint2f> contoursTemp = new ArrayList<>();
+        for(MatOfPoint point : contours) {
+            org.opencv.core.MatOfPoint2f newPoint = new org.opencv.core.MatOfPoint2f(point.toArray());
+            contoursTemp.add(newPoint);
+        }
+
+        for(int i = 0; i < contours.size(); i++){
+            double area = Imgproc.contourArea(contours.get(i));
+            if(area < 2000)
+                continue;
+
+            RotatedRect rect = Imgproc.minAreaRect(contoursTemp.get(i));
 
             int m_width = rect.boundingRect().width;
             int m_height = rect.boundingRect().height;
 
-            if (m_height > m_width * 1.2) continue;
+            if(m_height > m_width * 1.2 || m_width - m_height <= 1 || (Math.abs(rect.angle) >= 15.0 && Math.abs(rect.angle) <= 85.0))
+                continue;
 
+            System.out.println(rect.angle);
             rects.add(rect);
+
+
+            Log.d("做完沒", "還沒");
+            pts = new Point[4];
+            rect.points(pts);   //提取RotatedRect中的四個頂點 放進pts[4]
+            int xx = (int)rect.boundingRect().tl().x;
+            int yy = (int)rect.boundingRect().tl().y;
+            if(xx < 0) xx = 0;
+            if(yy < 0) yy = 0;
+            if(xx + m_width >= img.cols()) m_width = img.cols() - xx;
+            if(yy + m_height >= img.rows()) m_height = img.rows() - yy;
+            Rect TextRect = new Rect(xx,yy,m_width,m_height); //利用RotatedRect的左上頂點座標，做出Rect
+            TextRects.add(TextRect); //做出的Rect 放進Vector<Rect>
+
+
+
         }
 
-        return  rects;
+
+
+        return rects;
     }
     // CV Function Region
 
     public void processImage(){
+/*
         String OCRresult = null;
         mTess.setImage(image);
-
         OCRresult = mTess.getUTF8Text();
         //displayText.setText(OCRresult);
         extractName(OCRresult);
         extractEmail(OCRresult);
         extractPhone(OCRresult);
         System.out.println(OCRresult);
+*/
+        displayText.setText("");
+        String OCRresult = "";
+        String AllResult = "";
+
+        //抓出每個ROI來辨識
+        for(Mat rgbMat : ROIs){
+            Bitmap dstBitmap = Bitmap.createBitmap(rgbMat.width(), rgbMat.height(), Bitmap.Config.ARGB_8888);
+            Utils.matToBitmap(rgbMat, dstBitmap);
+            mTess.setImage(dstBitmap);
+            OCRresult = mTess.getUTF8Text();
+            //      displayImage.setImageBitmap(dstBitmap);
+            System.out.println(OCRresult);
+            AllResult = OCRresult + "\n" +  AllResult   ;
+        }
+        //displayText.append(AllResult);
+        extractName(AllResult);
+        extractEmail(AllResult);
+        extractPhone(AllResult);
+
+        displayName.setFocusable(true);
+        displayName.setEnabled(true);
+        displayName.setFocusableInTouchMode(true);
+        displayName.requestFocus();
+        displayPhone.setFocusable(true);
+        displayPhone.setEnabled(true);
+        displayPhone.setFocusableInTouchMode(true);
+        displayPhone.requestFocus();
+        displayEmail.setFocusable(true);
+        displayEmail.setEnabled(true);
+        displayEmail.setFocusableInTouchMode(true);
+        displayEmail.requestFocus();
+/*
+        //   抓出單一個ROI來辨識
+        Bitmap dstBitmap = Bitmap.createBitmap(ROIs.get(2).width(), ROIs.get(2).height(), Bitmap.Config.ARGB_8888);
+        Utils.matToBitmap(ROIs.get(2), dstBitmap);
+        mTess.setImage(dstBitmap);
+        OCRresult = mTess.getUTF8Text();
+        displayText.setText(OCRresult);
+        System.out.println(OCRresult);
+                */
+
+ /*
+        // 掃全圖
+        mTess.setImage(image);
+        OCRresult = mTess.getUTF8Text();
+        displayText.setText(OCRresult);
+        System.out.println(OCRresult);
+        */
+        ROIs.clear();
     }
 
     public void extractName(String str){
         System.out.println("Getting the Name");
-        final String NAME_REGEX = "^([A-Z]([a-z]*|\\.) *){1,2}([A-Z][a-z]+-?)+$";
+        final String NAME_REGEX = "^([A-Z]([a-z]*|\\.) *){1,2}([A-Z][a-z]+-?)+($|([,].+$))";
         Pattern p = Pattern.compile(NAME_REGEX, Pattern.MULTILINE);
         Matcher m =  p.matcher(str);
         if(m.find()){
@@ -457,7 +704,9 @@ public class MainActivity extends AppCompatActivity {
 
     public void extractEmail(String str) {
         System.out.println("Getting the email");
-        final String EMAIL_REGEX = "(?:[a-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\\.[a-z0-9!#$%&'*+/=?^_`{|}~-]+)*|\"(?:[\\x01-\\\\x08\\x0b\\x0c\\x0e-\\x1f\\x21\\x23-\\x5b\\x5d-\\x7f]|\\\\[\\x01-\\x09\\x0b\\x0c\\x0e-\\x7f])*\")@(?:(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\\.)+[a-z0-9](?:[a-z0-9-]*[a-z0-9])?|\\[(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?|[a-z0-9-]*[a-z0-9]:(?:[\\x01-\\\\x08\\x0b\\x0c\\x0e-\\x1f\\x21-\\x5a\\x53-\\x7f]|\\\\[\\x01-\\x09\\x0b\\x0c\\x0e-\\x7f])+)\\])";
+        //final String EMAIL_REGEX = "(?:[a-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\\.[a-z0-9!#$%&'*+/=?^_`{|}~-]+)*|\"(?:[\\x01-\\\\x08\\x0b\\x0c\\x0e-\\x1f\\x21\\x23-\\x5b\\x5d-\\x7f]|\\\\[\\x01-\\x09\\x0b\\x0c\\x0e-\\x7f])*\")@(?:(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\\.)+[a-z0-9](?:[a-z0-9-]*[a-z0-9])?|\\[(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?|[a-z0-9-]*[a-z0-9]:(?:[\\x01-\\\\x08\\x0b\\x0c\\x0e-\\x1f\\x21-\\x5a\\x53-\\x7f]|\\\\[\\x01-\\x09\\x0b\\x0c\\x0e-\\x7f])+)\\])";
+        // final String EMAIL_REGEX = "^[_a-z0-9-]+([.][_a-z0-9-]+)*@([a-z0-9-._]+)*$";
+        final String EMAIL_REGEX = "^.*[@\\xc2\\xae].*$";
         Pattern p = Pattern.compile(EMAIL_REGEX, Pattern.MULTILINE);
         Matcher m = p.matcher(str);   // get a matcher object
         if(m.find()){
@@ -478,7 +727,7 @@ public class MainActivity extends AppCompatActivity {
     public void extractPhone(String str){
         System.out.println("Getting Phone Number");
         //final String PHONE_REGEX="(?:^|\\D)(\\d{3})[)\\-. ]*?(\\d{3})[\\-. ]*?(\\d{4})(?:$|\\D)";
-        final String PHONE_REGEX="\\(?\\d{2,3}\\)?[\\s\\-]?\\d{3,4}[\\s\\-]?\\d{4}";
+        final String PHONE_REGEX="\\(?\\d{2,3}\\)?[\\s\\-\\x12\\x94\\x80]?\\d{3,4}[\\s\\-\\x12\\x94\\x80]?\\d{4}";
 
         Pattern p = Pattern.compile(PHONE_REGEX, Pattern.MULTILINE);
         Matcher m = p.matcher(str);   // get a matcher object
@@ -511,7 +760,7 @@ public class MainActivity extends AppCompatActivity {
         }
         //The directory exists, but there is no data file in it
         if(dir.exists()) {
-            String datafilepath = datapath+ "/tessdata/eng.traineddata";
+            String datafilepath = datapath+"/"+trainLan;
             File datafile = new File(datafilepath);
             if (!datafile.exists()) {
                 copyFiles();
@@ -522,13 +771,13 @@ public class MainActivity extends AppCompatActivity {
     private void copyFiles() {
         try {
             //location we want the file to be at
-            String filepath = datapath + "/tessdata/eng.traineddata";
+            String filepath = datapath + "/"+trainLan;
 
             //get access to AssetManager
             AssetManager assetManager = getAssets();
 
             //open byte streams for reading/writing
-            InputStream instream = assetManager.open("tessdata/eng.traineddata");
+            InputStream instream = assetManager.open(trainLan);
             OutputStream outstream = new FileOutputStream(filepath);
 
             //copy the file to the location specified by filepath
@@ -552,11 +801,11 @@ public class MainActivity extends AppCompatActivity {
 
         // Creates a new Intent to insert a contact
         Intent intent = new Intent(ContactsContract.Intents.Insert.ACTION);
-         // Sets the MIME type to match the Contacts Provider
+        // Sets the MIME type to match the Contacts Provider
         intent.setType(ContactsContract.RawContacts.CONTENT_TYPE);
 
         //Checks if we have the name, email and phone number...
-        if(recognitionSuccess){
+        if(!(displayName.getText().toString().equals("") || displayName.getText().toString().equals("None Name"))){
             //Adds the name...
             intent.putExtra(ContactsContract.Intents.Insert.NAME, displayName.getText());
 
@@ -614,6 +863,14 @@ public class MainActivity extends AppCompatActivity {
         } else {
             Log.d("權限問題", "否");
             startActivityForResult(intent, REQUEST_TO_GALLERY);
+        }
+    }
+
+    public  void toExcel() {
+        if(!(displayName.getText().toString().equals("") || displayName.getText().toString().equals("None Name"))){
+            ExcelExport ee = new ExcelExport(picturepath + "BCRInfoOutput.xls", displayName.getText().toString(), displayEmail.getText().toString(), displayPhone.getText().toString());
+        }else{
+            Toast.makeText(getApplicationContext(), "No proper information to add to excel file!", Toast.LENGTH_LONG).show();
         }
     }
 }

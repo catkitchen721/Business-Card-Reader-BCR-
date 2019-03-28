@@ -83,40 +83,60 @@
         android:text="Here is the OCR text!"
         tools:text="Here is the OCR text!"/>
 
-    <TextView
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:background="#e4e3e3"
+    <EditText
         android:id="@+id/textView5"
-        android:gravity="center"
-        tools:text="James Bond!"/>
-
-    <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:background="#e4e3e3"
+        android:ems="10"
+        android:gravity="center"
+        android:inputType="textPersonName"
+        tools:text="Name" />
+
+    <EditText
         android:id="@+id/textView4"
-        android:gravity="center"
-        tools:text="Phone Number!"/>
-
-    <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:background="#e4e3e3"
-        android:id="@+id/textView3"
+        android:ems="10"
         android:gravity="center"
-        tools:text="nooneknows@jamesbond.com!"/>
+        android:inputType="textPersonName"
+        tools:text="Phone" />
+
+    <EditText
+        android:id="@+id/textView3"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="#e4e3e3"
+        android:ems="10"
+        android:gravity="center"
+        android:inputType="textPersonName"
+        tools:text="Email" />
 
     <TextView
-        android:id="@+id/textView6"
-        android:layout_width="126dp"
+        android:id="@+id/textView9"
+        android:layout_width="match_parent"
         android:layout_height="40dp"
         android:layout_gravity="center_horizontal"
         android:layout_margin="4dp"
+        android:layout_weight="1"
+        android:background="#167865"
+        android:gravity="center"
+        android:text="Info Correct! Save to Excel"
+        tools:text="Info Correct! Save to Excel" />
+
+    <TextView
+        android:id="@+id/textView6"
+        android:layout_width="match_parent"
+        android:layout_height="40dp"
+        android:layout_gravity="center_horizontal"
+        android:layout_margin="4dp"
+        android:layout_weight="1"
         android:background="#167865"
         android:gravity="center"
         android:text="Add to Contacts!"
         tools:text="Add to Contacts!" />
 
 </LinearLayout>
+
 </ScrollView>
