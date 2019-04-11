@@ -67,13 +67,6 @@
         android:text="Run OCR!"
         tools:text="Run OCR!" />
 
-    <SeekBar
-        android:id="@+id/thresValue"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:max="255"
-        android:progress="100" />
-
     <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -100,7 +93,7 @@
         android:background="#e4e3e3"
         android:ems="10"
         android:gravity="center"
-        android:inputType="textPersonName"
+        android:inputType="phone"
         tools:text="Phone" />
 
     <EditText
@@ -110,7 +103,7 @@
         android:background="#e4e3e3"
         android:ems="10"
         android:gravity="center"
-        android:inputType="textPersonName"
+        android:inputType="textEmailAddress"
         tools:text="Email" />
 
     <TextView

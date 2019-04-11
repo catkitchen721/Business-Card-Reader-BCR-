@@ -9,9 +9,11 @@ import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.graphics.Color;
 import android.graphics.BitmapFactory;
+import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Environment;
+import android.os.Handler;
 import android.provider.ContactsContract;
 import android.provider.MediaStore;
 import android.support.annotation.NonNull;
@@ -19,6 +21,7 @@ import android.support.annotation.Nullable;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.support.v4.content.PermissionChecker;
+import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
@@ -102,6 +105,9 @@ public class MainActivity extends AppCompatActivity {
     String picturepath = "";
     String trainLan = "";
 
+    public AlertDialog loadingDialog;
+    Handler threadHdlr = new Handler();
+
     long timeSeed = 0l;
     int threshold_value = 100;
     boolean nameSuccess = false;
@@ -150,8 +156,6 @@ public class MainActivity extends AppCompatActivity {
         displayEmail = (EditText) findViewById(R.id.textView3);
         displayImage = (ImageView) findViewById(R.id.imageView);
 
-        thresValue = (SeekBar) findViewById(R.id.thresValue);
-
         LineMat = new Mat();
         dilaMat = new Mat();
         gMat = new Mat();
@@ -192,7 +196,27 @@ public class MainActivity extends AppCompatActivity {
         runOCR.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                processImage();
+                loadingDialog = new AlertDialog.Builder(MainActivity.this)
+                        .setMessage("Loading...")
+                        .create();
+
+                loadingDialog.setCancelable(false);
+                loadingDialog.show();
+
+                Thread thr = new Thread(new Runnable() {
+                    @Override
+                    public void run() {
+                        processImageCounting();
+
+                        threadHdlr.post(new Runnable() {
+                            public void run() {
+                                processImageTail();
+                                loadingDialog.dismiss();
+                            }
+                        });
+                    }
+                });
+                thr.start();
             }
         });
 
@@ -221,25 +245,6 @@ public class MainActivity extends AppCompatActivity {
         toExcel.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) { toExcel(); }
-        });
-
-        //Set SeekBar...
-        thresValue.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
-            @Override
-            public void onProgressChanged(SeekBar seekBar, int progress, boolean b) {
-                displayText.setText("Thres:" + progress + "  / 255 ");
-                threshold_value = progress;
-            }
-
-            @Override
-            public void onStartTrackingTouch(SeekBar seekBar) {
-
-            }
-
-            @Override
-            public void onStopTrackingTouch(SeekBar seekBar) {
-
-            }
         });
     }
 
@@ -279,14 +284,13 @@ public class MainActivity extends AppCompatActivity {
             /* Tempararyly remove threshold function.
             Imgproc.threshold(grayMat, thsMat, threshold_value, 255, Imgproc.THRESH_TOZERO);
             */
-
-                detectText(rgbMat);  // Tag All Text Regions.
-
                 Imgproc.pyrDown(rgbMat, x05Mat, new Size(rgbMat.cols()*0.5, rgbMat.rows()*0.5));
                 Imgproc.pyrDown(x05Mat, x025Mat, new Size(x05Mat.cols()*0.5, x05Mat.rows()*0.5));
-                Log.d("矩陣大小", rgbMat.toString() + x025Mat.toString());
+
+                detectText(x025Mat);  // Tag All Text Regions.
+
                 Utils.matToBitmap(x025Mat, x025Bitmap); //convert mat to bitmap
-                Utils.matToBitmap(rgbMat, dstBitmap); //convert mat to bitmap
+                //Utils.matToBitmap(rgbMat, dstBitmap); //convert mat to bitmap
 
                 displayImage.setImageBitmap(x025Bitmap);
                 image = x025Bitmap;
@@ -327,47 +331,61 @@ public class MainActivity extends AppCompatActivity {
 
                 Utils.bitmapToMat(srcBitmap, rgbMat);//convert original bitmap to Mat, R G B.
 
-     /*           Imgproc.cvtColor(rgbMat, grayMat, Imgproc.COLOR_RGB2GRAY);
+                int mode = 1;
+
+             /* Imgproc.cvtColor(rgbMat, grayMat, Imgproc.COLOR_RGB2GRAY);
                 Imgproc.bilateralFilter(grayMat,dstMat,5,30,30);
                 Imgproc.cvtColor(grayMat,rgbMat,Imgproc.COLOR_GRAY2RGB);*/
+                if(rgbMat.cols() > 1500 && rgbMat.rows() > 1500)
+                {
+                    Imgproc.pyrDown(rgbMat, x05Mat, new Size(rgbMat.cols()*0.5, rgbMat.rows()*0.5));
+                    Imgproc.pyrDown(x05Mat, x025Mat, new Size(x05Mat.cols()*0.5, x05Mat.rows()*0.5));
 
+                    detectText(x025Mat);  // Tag All Text Regions.
 
+                    dstBitmap = Bitmap.createBitmap((int)(srcBitmap.getWidth()*0.25), (int)(srcBitmap.getHeight()*0.25), Bitmap.Config.ARGB_8888);
 
-                detectText(rgbMat);  // Tag All Text Regions.
+                    if(mode == 0) {
+                        Utils.matToBitmap(x025Mat, dstBitmap);
+                    }else if(mode == 1) {
+                        Utils.matToBitmap(LineMat, dstBitmap);
+                    }else if(mode == 2) {
+                        Utils.matToBitmap(dilaMat, dstBitmap);
+                    }else if(mode == 3) {
+                        Utils.matToBitmap(gMat, dstBitmap);
+                    }else if(mode == 4){
+                        Utils.matToBitmap(sobelMat, dstBitmap);
+                    }
+                }
+                else
+                {
+                    detectText(rgbMat);  // Tag All Text Regions.
 
-                //    Imgproc.pyrDown(rgbMat, x05Mat, new Size(rgbMat.cols()*0.5, rgbMat.rows()*0.5));
-                //  Imgproc.pyrDown(x05Mat, x025Mat, new Size(x05Mat.cols()*0.5, x05Mat.rows()*0.5));
-                //   Log.d("矩陣大小", rgbMat.toString() + x025Mat.toString());
-                //    Utils.matToBitmap(x025Mat, x025Bitmap); //convert mat to bitmap
+                    dstBitmap = Bitmap.createBitmap((int)(srcBitmap.getWidth()), (int)(srcBitmap.getHeight()), Bitmap.Config.ARGB_8888);
 
-
-                dstBitmap = Bitmap.createBitmap(srcBitmap.getWidth(), srcBitmap.getHeight(), Bitmap.Config.ARGB_8888);
-
-                int mode = 0;
-                if(mode == 0) {
-                    Utils.matToBitmap(rgbMat, dstBitmap);
-                }else if(mode == 1) {
-                    Utils.matToBitmap(LineMat, dstBitmap);
-                }else if(mode == 2) {
-                    Utils.matToBitmap(dilaMat, dstBitmap);
-                }else if(mode == 3) {
-                    Utils.matToBitmap(gMat, dstBitmap);
-                }else if(mode == 4){
-                    Utils.matToBitmap(sobelMat, dstBitmap);
+                    if(mode == 0) {
+                        Utils.matToBitmap(rgbMat, dstBitmap);
+                    }else if(mode == 1) {
+                        Utils.matToBitmap(LineMat, dstBitmap);
+                    }else if(mode == 2) {
+                        Utils.matToBitmap(dilaMat, dstBitmap);
+                    }else if(mode == 3) {
+                        Utils.matToBitmap(gMat, dstBitmap);
+                    }else if(mode == 4){
+                        Utils.matToBitmap(sobelMat, dstBitmap);
+                    }
                 }
 
                 System.out.println(ROIs.size() + "個\n");
                 displayImage.setImageBitmap(dstBitmap);
                 image = dstBitmap;
 
-
-/*
+                /*
                 dstBitmap = Bitmap.createBitmap(ROIs.get(4).width(), ROIs.get(4).height(), Bitmap.Config.ARGB_8888);
                 Utils.matToBitmap(ROIs.get(4), dstBitmap); //convert mat to bitmap
                 System.out.println(ROIs.size());
                 displayImage.setImageBitmap(dstBitmap);
-*/
-
+                */
 
             } catch(Exception e) {
                 e.printStackTrace();
@@ -527,6 +545,10 @@ public class MainActivity extends AppCompatActivity {
         final Size kernelSize2 = new Size(15, 12);
         final Size kernelSize3 = new Size(10,9);*/
 
+        /*final Size kernelSize1 = new Size(20, 8);
+        final Size kernelSize2 = new Size(24, 7);
+        final Size kernelSize3 = new Size(10,9);*/
+
         final Size kernelSize1 = new Size(20, 8);
         final Size kernelSize2 = new Size(24, 7);
         final Size kernelSize3 = new Size(10,9);
@@ -621,37 +643,10 @@ public class MainActivity extends AppCompatActivity {
 
         return rects;
     }
+
     // CV Function Region
 
-    public void processImage(){
-/*
-        String OCRresult = null;
-        mTess.setImage(image);
-        OCRresult = mTess.getUTF8Text();
-        //displayText.setText(OCRresult);
-        extractName(OCRresult);
-        extractEmail(OCRresult);
-        extractPhone(OCRresult);
-        System.out.println(OCRresult);
-*/
-        displayText.setText("");
-        String OCRresult = "";
-        String AllResult = "";
-
-        //抓出每個ROI來辨識
-        for(Mat rgbMat : ROIs){
-            Bitmap dstBitmap = Bitmap.createBitmap(rgbMat.width(), rgbMat.height(), Bitmap.Config.ARGB_8888);
-            Utils.matToBitmap(rgbMat, dstBitmap);
-            mTess.setImage(dstBitmap);
-            OCRresult = mTess.getUTF8Text();
-            //      displayImage.setImageBitmap(dstBitmap);
-            System.out.println(OCRresult);
-            AllResult = OCRresult + "\n" +  AllResult   ;
-        }
-        //displayText.append(AllResult);
-        extractName(AllResult);
-        extractEmail(AllResult);
-        extractPhone(AllResult);
+    public void processImageTail(){
 
         displayName.setFocusable(true);
         displayName.setEnabled(true);
@@ -683,6 +678,37 @@ public class MainActivity extends AppCompatActivity {
         System.out.println(OCRresult);
         */
         ROIs.clear();
+    }
+
+    public void processImageCounting(){
+        /*
+        String OCRresult = null;
+        mTess.setImage(image);
+        OCRresult = mTess.getUTF8Text();
+        //displayText.setText(OCRresult);
+        extractName(OCRresult);
+        extractEmail(OCRresult);
+        extractPhone(OCRresult);
+        System.out.println(OCRresult);
+*/
+        displayText.setText("");
+        String OCRresult = "";
+        String AllResult = "";
+
+        //抓出每個ROI來辨識
+        for(Mat rgbMat : ROIs){
+            Bitmap dstBitmap = Bitmap.createBitmap(rgbMat.width(), rgbMat.height(), Bitmap.Config.ARGB_8888);
+            Utils.matToBitmap(rgbMat, dstBitmap);
+            mTess.setImage(dstBitmap);
+            OCRresult = mTess.getUTF8Text();
+            //      displayImage.setImageBitmap(dstBitmap);
+            System.out.println(OCRresult);
+            AllResult = OCRresult + "\n" +  AllResult   ;
+        }
+        //displayText.append(AllResult);
+        extractName(AllResult);
+        extractEmail(AllResult);
+        extractPhone(AllResult);
     }
 
     public void extractName(String str){
@@ -807,15 +833,15 @@ public class MainActivity extends AppCompatActivity {
         //Checks if we have the name, email and phone number...
         if(!(displayName.getText().toString().equals("") || displayName.getText().toString().equals("None Name"))){
             //Adds the name...
-            intent.putExtra(ContactsContract.Intents.Insert.NAME, displayName.getText());
+            intent.putExtra(ContactsContract.Intents.Insert.NAME, displayName.getText().toString());
 
             //Adds the email...
-            intent.putExtra(ContactsContract.Intents.Insert.EMAIL, displayEmail.getText());
+            intent.putExtra(ContactsContract.Intents.Insert.EMAIL, displayEmail.getText().toString());
             //Adds the email as Work Email
             intent.putExtra(ContactsContract.Intents.Insert.EMAIL_TYPE, ContactsContract.CommonDataKinds.Email.TYPE_WORK);
 
             //Adds the phone number...
-            intent.putExtra(ContactsContract.Intents.Insert.PHONE, displayPhone.getText());
+            intent.putExtra(ContactsContract.Intents.Insert.PHONE, displayPhone.getText().toString());
             //Adds the phone number as Work Phone
             intent.putExtra(ContactsContract.Intents.Insert.PHONE_TYPE, ContactsContract.CommonDataKinds.Phone.TYPE_WORK);
 
@@ -869,6 +895,7 @@ public class MainActivity extends AppCompatActivity {
     public  void toExcel() {
         if(!(displayName.getText().toString().equals("") || displayName.getText().toString().equals("None Name"))){
             ExcelExport ee = new ExcelExport(picturepath + "BCRInfoOutput.xls", displayName.getText().toString(), displayEmail.getText().toString(), displayPhone.getText().toString());
+            Toast.makeText(getApplicationContext(), "Adding Information to excel files was successful!", Toast.LENGTH_LONG).show();
         }else{
             Toast.makeText(getApplicationContext(), "No proper information to add to excel file!", Toast.LENGTH_LONG).show();
         }
