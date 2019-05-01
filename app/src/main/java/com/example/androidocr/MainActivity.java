@@ -27,6 +27,7 @@ import android.os.Bundle;
 import android.util.Log;
 import android.view.Display;
 import android.view.View;
+import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.SeekBar;
@@ -125,6 +126,8 @@ public class MainActivity extends AppCompatActivity {
     TextView takePhoto;
     TextView fromGallery;
     TextView toExcel;
+    CheckBox isHanyu;
+    CheckBox isCallingCode;
     SeekBar thresValue;
 
     private static final int REQUEST_EXTERNAL_STORAGE = 1;
@@ -155,6 +158,8 @@ public class MainActivity extends AppCompatActivity {
         displayPhone = (EditText) findViewById(R.id.textView4);
         displayEmail = (EditText) findViewById(R.id.textView3);
         displayImage = (ImageView) findViewById(R.id.imageView);
+        isHanyu = (CheckBox) findViewById(R.id.isHanyu);
+        isCallingCode = (CheckBox) findViewById(R.id.isCallingCode);
 
         LineMat = new Mat();
         dilaMat = new Mat();
@@ -173,6 +178,10 @@ public class MainActivity extends AppCompatActivity {
         displayEmail.setFocusable(false);
         displayEmail.setEnabled(false);
         displayEmail.setFocusableInTouchMode(false);
+
+        //initialize hanyu check
+        isHanyu.setChecked(false);
+        isCallingCode.setChecked(false);
 
         //init image
         image = BitmapFactory.decodeResource(getResources(), R.drawable.test_image3);
@@ -287,13 +296,27 @@ public class MainActivity extends AppCompatActivity {
                 Imgproc.pyrDown(rgbMat, x05Mat, new Size(rgbMat.cols()*0.5, rgbMat.rows()*0.5));
                 Imgproc.pyrDown(x05Mat, x025Mat, new Size(x05Mat.cols()*0.5, x05Mat.rows()*0.5));
 
+                ROIs.clear();
                 detectText(x025Mat);  // Tag All Text Regions.
 
-                Utils.matToBitmap(x025Mat, x025Bitmap); //convert mat to bitmap
+                int mode = 1;
+                if(mode == 0) {
+                    Utils.matToBitmap(x025Mat, x025Bitmap);
+                }else if(mode == 1) {
+                    Utils.matToBitmap(LineMat, x025Bitmap);
+                }else if(mode == 2) {
+                    Utils.matToBitmap(dilaMat, x025Bitmap);
+                }else if(mode == 3) {
+                    Utils.matToBitmap(gMat, x025Bitmap);
+                }else if(mode == 4){
+                    Utils.matToBitmap(sobelMat, x025Bitmap);
+                }
+                //Utils.matToBitmap(x025Mat, x025Bitmap); //convert mat to bitmap
                 //Utils.matToBitmap(rgbMat, dstBitmap); //convert mat to bitmap
 
                 displayImage.setImageBitmap(x025Bitmap);
                 image = x025Bitmap;
+                //runOCR.setEnabled(true);
 
             } catch(Exception e) {
                 e.printStackTrace();
@@ -341,6 +364,7 @@ public class MainActivity extends AppCompatActivity {
                     Imgproc.pyrDown(rgbMat, x05Mat, new Size(rgbMat.cols()*0.5, rgbMat.rows()*0.5));
                     Imgproc.pyrDown(x05Mat, x025Mat, new Size(x05Mat.cols()*0.5, x05Mat.rows()*0.5));
 
+                    ROIs.clear();
                     detectText(x025Mat);  // Tag All Text Regions.
 
                     dstBitmap = Bitmap.createBitmap((int)(srcBitmap.getWidth()*0.25), (int)(srcBitmap.getHeight()*0.25), Bitmap.Config.ARGB_8888);
@@ -359,6 +383,7 @@ public class MainActivity extends AppCompatActivity {
                 }
                 else
                 {
+                    ROIs.clear();
                     detectText(rgbMat);  // Tag All Text Regions.
 
                     dstBitmap = Bitmap.createBitmap((int)(srcBitmap.getWidth()), (int)(srcBitmap.getHeight()), Bitmap.Config.ARGB_8888);
@@ -386,6 +411,8 @@ public class MainActivity extends AppCompatActivity {
                 System.out.println(ROIs.size());
                 displayImage.setImageBitmap(dstBitmap);
                 */
+
+                //runOCR.setEnabled(true);
 
             } catch(Exception e) {
                 e.printStackTrace();
@@ -677,7 +704,8 @@ public class MainActivity extends AppCompatActivity {
         displayText.setText(OCRresult);
         System.out.println(OCRresult);
         */
-        ROIs.clear();
+        //ROIs.clear();
+        //runOCR.setEnabled(false);
     }
 
     public void processImageCounting(){
@@ -713,7 +741,15 @@ public class MainActivity extends AppCompatActivity {
 
     public void extractName(String str){
         System.out.println("Getting the Name");
-        final String NAME_REGEX = "^([A-Z]([a-z]*|\\.) *){1,2}([A-Z][a-z]+-?)+($|([,].+$))";
+        String NAME_REGEX = "^([A-Z]([a-z]*|\\.) *){1,2}([A-Z][a-z]+-?)+($|([,].+$))";
+        if(isHanyu.isChecked())
+        {
+            NAME_REGEX = "^([A-Z]([a-z]){1,4}([\\s-][A-Z]([a-z]){1,4})|[A-Z]([a-z]){1,4})\\s([A-Z]([a-z]){1,4}){1,3}$";
+        }
+        else
+        {
+            NAME_REGEX = "^([A-Z]([a-z]*|\\.) *){1,2}([A-Z][a-z]+-?)+($|([,].+$))";
+        }
         Pattern p = Pattern.compile(NAME_REGEX, Pattern.MULTILINE);
         Matcher m =  p.matcher(str);
         if(m.find()){
@@ -753,7 +789,16 @@ public class MainActivity extends AppCompatActivity {
     public void extractPhone(String str){
         System.out.println("Getting Phone Number");
         //final String PHONE_REGEX="(?:^|\\D)(\\d{3})[)\\-. ]*?(\\d{3})[\\-. ]*?(\\d{4})(?:$|\\D)";
-        final String PHONE_REGEX="\\(?\\d{2,3}\\)?[\\s\\-\\x12\\x94\\x80]?\\d{3,4}[\\s\\-\\x12\\x94\\x80]?\\d{4}";
+        String PHONE_REGEX="\\(?\\d{2,3}\\)?[\\s\\-\\x12\\x94\\x80]?\\d{3,4}[\\s\\-\\x12\\x94\\x80]?\\d{4}";
+
+        if(isCallingCode.isChecked())
+        {
+            PHONE_REGEX="(\\+)?(1-)?\\(?(\\+)?\\d{2,3}\\)?[\\s\\-\\x12\\x94\\x80]?\\d{1,2}\\)?[\\s\\-\\x12\\x94\\x80]\\d{3,4}[\\s\\-\\x12\\x94\\x80]?\\d{4}";
+        }
+        else
+        {
+            PHONE_REGEX="\\(?\\d{2,3}\\)?[\\s\\-\\x12\\x94\\x80]?\\d{3,4}[\\s\\-\\x12\\x94\\x80]?\\d{4}";
+        }
 
         Pattern p = Pattern.compile(PHONE_REGEX, Pattern.MULTILINE);
         Matcher m = p.matcher(str);   // get a matcher object

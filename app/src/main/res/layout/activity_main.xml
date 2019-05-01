@@ -55,6 +55,20 @@
 
     </LinearLayout>
 
+    <CheckBox
+        android:id="@+id/isHanyu"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Name is Hanyu Pinyin"
+        android:textStyle="bold" />
+
+    <CheckBox
+        android:id="@+id/isCallingCode"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Phone is Country Calling Codes prefix"
+        android:textStyle="bold" />
+
     <TextView
         android:id="@+id/textView"
         android:layout_width="match_parent"
