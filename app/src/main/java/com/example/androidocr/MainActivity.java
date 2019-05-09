@@ -296,12 +296,15 @@ public class MainActivity extends AppCompatActivity {
                 Imgproc.pyrDown(rgbMat, x05Mat, new Size(rgbMat.cols()*0.5, rgbMat.rows()*0.5));
                 Imgproc.pyrDown(x05Mat, x025Mat, new Size(x05Mat.cols()*0.5, x05Mat.rows()*0.5));
 
-                ROIs.clear();
-                detectText(x025Mat);  // Tag All Text Regions.
+                ImagePers imgprs = new ImagePers(x025Mat);
+                Mat afterImgprsResult = imgprs.returnImg();
 
-                int mode = 1;
+                ROIs.clear();
+                //detectText(afterImgprsResult);  // Tag All Text Regions.
+
+                int mode = 0;
                 if(mode == 0) {
-                    Utils.matToBitmap(x025Mat, x025Bitmap);
+                    Utils.matToBitmap(afterImgprsResult, x025Bitmap);
                 }else if(mode == 1) {
                     Utils.matToBitmap(LineMat, x025Bitmap);
                 }else if(mode == 2) {
@@ -354,7 +357,7 @@ public class MainActivity extends AppCompatActivity {
 
                 Utils.bitmapToMat(srcBitmap, rgbMat);//convert original bitmap to Mat, R G B.
 
-                int mode = 1;
+                int mode = 0;
 
              /* Imgproc.cvtColor(rgbMat, grayMat, Imgproc.COLOR_RGB2GRAY);
                 Imgproc.bilateralFilter(grayMat,dstMat,5,30,30);
@@ -364,13 +367,16 @@ public class MainActivity extends AppCompatActivity {
                     Imgproc.pyrDown(rgbMat, x05Mat, new Size(rgbMat.cols()*0.5, rgbMat.rows()*0.5));
                     Imgproc.pyrDown(x05Mat, x025Mat, new Size(x05Mat.cols()*0.5, x05Mat.rows()*0.5));
 
+                    ImagePers imgprs = new ImagePers(x025Mat);
+                    Mat afterImgprsResult = imgprs.returnImg();
+
                     ROIs.clear();
-                    detectText(x025Mat);  // Tag All Text Regions.
+                    //detectText(afterImgprsResult);  // Tag All Text Regions.
 
                     dstBitmap = Bitmap.createBitmap((int)(srcBitmap.getWidth()*0.25), (int)(srcBitmap.getHeight()*0.25), Bitmap.Config.ARGB_8888);
 
                     if(mode == 0) {
-                        Utils.matToBitmap(x025Mat, dstBitmap);
+                        Utils.matToBitmap(afterImgprsResult, dstBitmap);
                     }else if(mode == 1) {
                         Utils.matToBitmap(LineMat, dstBitmap);
                     }else if(mode == 2) {
@@ -383,13 +389,16 @@ public class MainActivity extends AppCompatActivity {
                 }
                 else
                 {
+                    ImagePers imgprs = new ImagePers(x025Mat);
+                    Mat afterImgprsResult = imgprs.returnImg();
+
                     ROIs.clear();
-                    detectText(rgbMat);  // Tag All Text Regions.
+                    //detectText(afterImgprsResult);  // Tag All Text Regions.
 
                     dstBitmap = Bitmap.createBitmap((int)(srcBitmap.getWidth()), (int)(srcBitmap.getHeight()), Bitmap.Config.ARGB_8888);
 
                     if(mode == 0) {
-                        Utils.matToBitmap(rgbMat, dstBitmap);
+                        Utils.matToBitmap(afterImgprsResult, dstBitmap);
                     }else if(mode == 1) {
                         Utils.matToBitmap(LineMat, dstBitmap);
                     }else if(mode == 2) {
