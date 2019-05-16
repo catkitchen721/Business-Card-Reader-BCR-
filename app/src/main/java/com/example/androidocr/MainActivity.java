@@ -300,7 +300,7 @@ public class MainActivity extends AppCompatActivity {
                 Mat afterImgprsResult = imgprs.returnImg();
 
                 ROIs.clear();
-                //detectText(afterImgprsResult);  // Tag All Text Regions.
+                detectText(afterImgprsResult);  // Tag All Text Regions.
 
                 int mode = 0;
                 if(mode == 0) {
@@ -371,7 +371,7 @@ public class MainActivity extends AppCompatActivity {
                     Mat afterImgprsResult = imgprs.returnImg();
 
                     ROIs.clear();
-                    //detectText(afterImgprsResult);  // Tag All Text Regions.
+                    detectText(afterImgprsResult);  // Tag All Text Regions.
 
                     dstBitmap = Bitmap.createBitmap((int)(srcBitmap.getWidth()*0.25), (int)(srcBitmap.getHeight()*0.25), Bitmap.Config.ARGB_8888);
 
@@ -393,7 +393,7 @@ public class MainActivity extends AppCompatActivity {
                     Mat afterImgprsResult = imgprs.returnImg();
 
                     ROIs.clear();
-                    //detectText(afterImgprsResult);  // Tag All Text Regions.
+                    detectText(afterImgprsResult);  // Tag All Text Regions.
 
                     dstBitmap = Bitmap.createBitmap((int)(srcBitmap.getWidth()), (int)(srcBitmap.getHeight()), Bitmap.Config.ARGB_8888);
 
