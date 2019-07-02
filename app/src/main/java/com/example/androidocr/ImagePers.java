@@ -1,5 +1,6 @@
 package com.example.androidocr;
 
+import android.os.Debug;
 import android.support.annotation.NonNull;
 import android.util.Log;
 
@@ -38,6 +39,7 @@ public class ImagePers {
     private Mat cannyMat = null;
     private Mat resultMat = null;
     private Mat lineMat = null;
+    private Mat polyMat = null;
 
     public ImagePers(Mat org)
     {
@@ -59,16 +61,32 @@ public class ImagePers {
 
         // 找輪廓
         Vector<MatOfPoint> contours = new Vector<>();
+        Vector<MatOfPoint> selectedContours = new Vector<>();
         MatOfPoint2f contours2f = new MatOfPoint2f();
+        MatOfPoint2f contours2fMax = new MatOfPoint2f();
         Mat hry = new Mat();
         Imgproc.findContours(this.cannyMat, contours, hry, Imgproc.RETR_CCOMP, Imgproc.CHAIN_APPROX_SIMPLE);
 
         // 畫輪廓
         this.lineMat = Mat.zeros(this.cannyMat.rows(), this.cannyMat.cols(), CvType.CV_8UC3);
+        this.polyMat = Mat.zeros(org.size(), CvType.CV_8UC3);
 
         for(int i=0; i<contours.size(); i++)
         {
-            Imgproc.drawContours(this.lineMat, contours, i, new Scalar((new Random()).nextInt(256), (new Random()).nextInt(256), (new Random()).nextInt(256)), 1, 8, hry, 2147483647, new Point());
+            if((contours.elementAt(i).total() >= 200))
+            {
+                System.out.println("total: " + String.valueOf(contours.elementAt(i).total()));
+                Imgproc.drawContours(this.polyMat, contours, i, new Scalar((new Random()).nextInt(256), (new Random()).nextInt(256), (new Random()).nextInt(256)), 1, 8, hry, 2147483647, new Point());
+                selectedContours.add(contours.elementAt(i));
+            }
+        }
+        Log.d("select contour size: ", String.valueOf(selectedContours.size()));
+        contours.clear();
+        contours = new Vector<>(selectedContours);
+        Log.d("contour size: ", String.valueOf(contours.size()));
+        for(int i=0;i<contours.size();i++)
+        {
+            Log.d("contour size: ", String.valueOf(contours.size()));
         }
 
         Vector<MatOfPoint2f> polyContours2f = new Vector<>(contours.size());
@@ -80,9 +98,19 @@ public class ImagePers {
 
         int maxArea = 0;
 
-        for(int i=0; i<contours.size(); i++)
+        /*for(int i=0; i<contours.size(); i++)
         {
             if (Imgproc.contourArea(contours.get(i)) > Imgproc.contourArea(contours.get(maxArea))) {
+                maxArea = i;
+            }
+            Log.d("area: ", String.valueOf(Imgproc.contourArea(contours.get(maxArea))));
+        }*/
+
+        for(int i=0; i<contours.size(); i++)
+        {
+            contours.get(i).convertTo(contours2f, CvType.CV_32FC2);
+            contours.get(maxArea).convertTo(contours2fMax, CvType.CV_32FC2);
+            if (Imgproc.arcLength(contours2f, false) > Imgproc.arcLength(contours2fMax, false)) {
                 maxArea = i;
             }
             Log.d("area: ", String.valueOf(Imgproc.contourArea(contours.get(maxArea))));
@@ -93,13 +121,13 @@ public class ImagePers {
             contours.get(i).convertTo(contours2f, CvType.CV_32FC2);
             //Log.d("polyinfo", String.valueOf(contours.get(i).dump()));
             double arclen = Imgproc.arcLength(contours2f, true);
-            Imgproc.approxPolyDP(contours2f, temp_polyContours2f, 0.1*arclen, true);
+            Imgproc.approxPolyDP(contours2f, temp_polyContours2f, 5, true);
             //Log.d("polyinfo", String.valueOf(temp_polyContours2f.dump()));
             polyContours2f.add(temp_polyContours2f);
             temp_polyContours2f = new MatOfPoint2f();
         }
 
-        Mat polyMat = Mat.zeros(org.size(), CvType.CV_8UC3);
+
         for(int i=0; i<contours.size(); i++)
         {
             polyContours2f.get(i).convertTo(temp_polyContours, CvType.CV_32S);
@@ -107,14 +135,23 @@ public class ImagePers {
             temp_polyContours = new MatOfPoint();
             //Log.d("polyinfo", String.valueOf(polyContours.get(i).dump()));
         }
-        Imgproc.drawContours(polyMat, polyContours, maxArea, new Scalar((new Random()).nextInt(256), (new Random()).nextInt(256), (new Random()).nextInt(256)), 2);
+        for(int i=0; i<polyContours.size(); i++)
+            Imgproc.drawContours(polyMat, polyContours, i, new Scalar((new Random()).nextInt(256), (new Random()).nextInt(256), (new Random()).nextInt(256)), 2);
 
         MatOfInt hull = new MatOfInt();
-        Imgproc.convexHull(polyContours.elementAt(maxArea), hull, false);
+        Point myrect_point[] = new Point[4];
+        RotatedRect myrect;
+        myrect = Imgproc.minAreaRect(polyContours2f.elementAt(maxArea));
+        myrect.points(myrect_point);
+        //Imgproc.convexHull(polyContours.elementAt(maxArea), hull, false);
 
-        for (int i = 0; i < hull.toArray().length; ++i){
-            Imgproc.circle(polyMat, polyContours.elementAt(maxArea).toArray()[i], 10, new Scalar((new Random()).nextInt(256), (new Random()).nextInt(256), (new Random()).nextInt(256)), 3);
+        for (int i = 0; i < myrect_point.length; ++i) {
+            Imgproc.circle(polyMat, myrect_point[i], 10, new Scalar((new Random()).nextInt(256), (new Random()).nextInt(256), (new Random()).nextInt(256)), 3);
         }
+
+        /*for (int i = 0; i < hull.toArray().length; ++i){
+            Imgproc.circle(polyMat, polyContours.elementAt(maxArea).toArray()[i], 10, new Scalar((new Random()).nextInt(256), (new Random()).nextInt(256), (new Random()).nextInt(256)), 3);
+        }*/
         //Core.addWeighted(polyMat, 0.5, org, 0.5, 0, polyMat);
 
         Point srcPoints[] = new Point[4];
@@ -130,7 +167,13 @@ public class ImagePers {
             polyContours2f.elementAt(maxArea).toArray()[i] = new Point(polyContours2f.elementAt(maxArea).toArray()[i].x * 4, polyContours2f.elementAt(maxArea).toArray()[i].y * 4);
         }*/
 
-        System.out.println(polyContours2f.elementAt(maxArea).toArray()[0]);
+        if(polyContours2f.elementAt(maxArea).toArray().length < 4)
+        {
+
+            return  polyMat;
+        }
+
+        /*System.out.println(polyContours2f.elementAt(maxArea).toArray()[0]);
         System.out.println(polyContours2f.elementAt(maxArea).toArray()[1]);
         System.out.println(polyContours2f.elementAt(maxArea).toArray()[2]);
         System.out.println(polyContours2f.elementAt(maxArea).toArray()[3]);
@@ -146,7 +189,25 @@ public class ImagePers {
         point_list2[0] = polyContours2f.elementAt(maxArea).toArray()[0].y;
         point_list2[1] = polyContours2f.elementAt(maxArea).toArray()[1].y;
         point_list2[2] = polyContours2f.elementAt(maxArea).toArray()[2].y;
-        point_list2[3] = polyContours2f.elementAt(maxArea).toArray()[3].y;
+        point_list2[3] = polyContours2f.elementAt(maxArea).toArray()[3].y;*/
+
+        System.out.println(myrect_point[0]);
+        System.out.println(myrect_point[1]);
+        System.out.println(myrect_point[2]);
+        System.out.println(myrect_point[3]);
+        System.out.println("---------------------------------------");
+
+        double point_list[] = new double[4];
+        point_list[0] = myrect_point[0].x;
+        point_list[1] = myrect_point[1].x;
+        point_list[2] = myrect_point[2].x;
+        point_list[3] = myrect_point[3].x;
+
+        double point_list2[] = new double[4];
+        point_list2[0] = myrect_point[0].y;
+        point_list2[1] = myrect_point[1].y;
+        point_list2[2] = myrect_point[2].y;
+        point_list2[3] = myrect_point[3].y;
 
         double temp = 0.0;
         boolean sorted = false;

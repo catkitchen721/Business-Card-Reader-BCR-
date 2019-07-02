@@ -3,6 +3,7 @@ package com.example.androidocr;
 import android.Manifest;
 import android.app.Activity;
 import android.content.Intent;
+import android.content.pm.ActivityInfo;
 import android.content.pm.PackageManager;
 import android.content.res.AssetManager;
 import android.database.Cursor;
@@ -14,6 +15,7 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Environment;
 import android.os.Handler;
+import android.os.StrictMode;
 import android.provider.ContactsContract;
 import android.provider.MediaStore;
 import android.support.annotation.NonNull;
@@ -79,7 +81,29 @@ import static org.opencv.imgproc.Imgproc.approxPolyDP;
 import static org.opencv.imgproc.Imgproc.erode;
 import static org.opencv.imgproc.Imgproc.getStructuringElement;
 import static org.opencv.imgproc.Imgproc.minAreaRect;
+import android.Manifest;
+import android.content.Intent;
+import android.content.pm.PackageManager;
+import android.os.Build;
+import android.support.v7.app.AppCompatActivity;
+import android.os.Bundle;
+import android.util.Log;
+import android.view.View;
+import android.widget.Toast;
 
+import com.google.android.gms.auth.api.signin.GoogleSignIn;
+import com.google.android.gms.auth.api.signin.GoogleSignInAccount;
+import com.google.android.gms.auth.api.signin.GoogleSignInClient;
+import com.google.android.gms.auth.api.signin.GoogleSignInOptions;
+import com.google.android.gms.common.api.GoogleApiClient;
+import com.google.android.gms.common.api.Scope;
+import com.google.api.client.extensions.android.http.AndroidHttp;
+import com.google.api.client.googleapis.extensions.android.gms.auth.GoogleAccountCredential;
+import com.google.api.client.json.gson.GsonFactory;
+import com.google.api.services.drive.Drive;
+import com.google.api.services.drive.DriveScopes;
+
+import java.util.Collections;
 public class MainActivity extends AppCompatActivity {
     static {
         System.loadLibrary("opencv_java3");
@@ -91,6 +115,12 @@ public class MainActivity extends AppCompatActivity {
             super.onManagerConnected(status);
         }
     };
+
+
+    public static int  REQUEST_CODE_SIGN_IN = 99;
+    private static final String TAG = "MainActivity";
+    public DriveServiceHelper mDriveServiceHelper;
+    private GoogleSignInClient client;
 
     Mat LineMat;
     Mat dilaMat;
@@ -126,6 +156,8 @@ public class MainActivity extends AppCompatActivity {
     TextView takePhoto;
     TextView fromGallery;
     TextView toExcel;
+    TextView uploadGD;
+    TextView signOutGD;
     CheckBox isHanyu;
     CheckBox isCallingCode;
     SeekBar thresValue;
@@ -147,11 +179,17 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+        StrictMode.VmPolicy.Builder builder = new StrictMode.VmPolicy.Builder(); //修正Android 7.0以上拍照系統功能
+        StrictMode.setVmPolicy(builder.build());
+        builder.detectFileUriExposure();
+
         runOCR = (TextView) findViewById(R.id.textView);
         openContacts = (TextView) findViewById(R.id.textView6);
         takePhoto = (TextView) findViewById(R.id.textView7);
         fromGallery = (TextView) findViewById(R.id.textView8);
         toExcel = (TextView) findViewById(R.id.textView9);
+        uploadGD = (TextView) findViewById(R.id.upload_button);
+        signOutGD = (TextView) findViewById(R.id.signout_button);
 
         displayText = (TextView) findViewById(R.id.textView2);
         displayName = (EditText) findViewById(R.id.textView5);
@@ -180,12 +218,11 @@ public class MainActivity extends AppCompatActivity {
         displayEmail.setFocusableInTouchMode(false);
 
         //initialize hanyu check
-        isHanyu.setChecked(false);
-        isCallingCode.setChecked(false);
+        isHanyu.setChecked(true);
+        isCallingCode.setChecked(true);
 
         //init image
         image = BitmapFactory.decodeResource(getResources(), R.drawable.test_image3);
-        displayImage.setImageBitmap(image);
 
         //create picture folder
         picturepath = Environment.getExternalStorageDirectory().getPath() + "/ocrPic/";
@@ -255,12 +292,69 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onClick(View view) { toExcel(); }
         });
+        uploadGD.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) { createFile(); }
+        });
+        signOutGD.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) { signOut(); }
+        });
+
+        requestSignIn();
+        checkPermission();
+    }
+
+    private void requestSignIn() {                          //向Google要求登入帳號後要使用的服務
+        GoogleSignInOptions signInOptions =
+                new GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+                        .requestEmail()
+                        .requestScopes(new Scope(DriveScopes.DRIVE_FILE),           //要求的服務類型
+                                new Scope(DriveScopes.DRIVE_APPDATA))
+                        .requestIdToken("561862270460-omke2t4cqrbcd5tq8jf1etogpug73jb3.apps.googleusercontent.com")
+                        .build();
+        //GoogleSignInClient client = GoogleSignIn.getClient(getActivity(), signInOptions);
+        client = GoogleSignIn.getClient(this, signInOptions);
+        // The result of the sign-in Intent is handled in onActivityResult.
+        startActivityForResult(client.getSignInIntent(), REQUEST_CODE_SIGN_IN);     //發出SignInIntent  接著會跳出使用者是否同意授權的Dialog
+    }
+
+    private void handleSignInResult(Intent result) {
+        GoogleSignIn.getSignedInAccountFromIntent(result)
+                .addOnSuccessListener(googleAccount -> {            //確定取得Account與憑證
+                    Log.d(TAG, "Signed in as " + googleAccount.getEmail());
+
+                    // Use the authenticated account to sign in to the Drive service.
+                    GoogleAccountCredential credential =
+                            GoogleAccountCredential.usingOAuth2(
+                                    this, Collections.singleton(DriveScopes.DRIVE_FILE));
+                    credential.setSelectedAccount(googleAccount.getAccount());
+                    Drive googleDriveService =
+                            new Drive.Builder(
+                                    AndroidHttp.newCompatibleTransport(),
+                                    new GsonFactory(),
+                                    credential)
+                                    .setApplicationName("AppName")
+                                    .build();
+
+                    // The DriveServiceHelper encapsulates all REST API and SAF functionality.
+                    // Its instantiation is required before handling any onClick actions.
+                    mDriveServiceHelper = new DriveServiceHelper(googleDriveService);
+                })
+                .addOnFailureListener(exception -> {
+                    mDriveServiceHelper = null;
+                    Log.e("123123132132132", "Unable to sign in.", exception);
+                });
+
+
     }
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
-
+        if (requestCode == REQUEST_CODE_SIGN_IN) {
+            handleSignInResult(data);
+        }
         if (requestCode != REQUEST_TO_CAMERA && requestCode != REQUEST_TO_GALLERY) {
             Log.d("錯誤", "不是拍照");
             return;
@@ -302,7 +396,10 @@ public class MainActivity extends AppCompatActivity {
                 ROIs.clear();
                 detectText(afterImgprsResult);  // Tag All Text Regions.
 
-                int mode = 0;
+                Utils.matToBitmap(afterImgprsResult, x025Bitmap);
+                image = x025Bitmap;
+
+                int mode = 1;
                 if(mode == 0) {
                     Utils.matToBitmap(afterImgprsResult, x025Bitmap);
                 }else if(mode == 1) {
@@ -318,7 +415,7 @@ public class MainActivity extends AppCompatActivity {
                 //Utils.matToBitmap(rgbMat, dstBitmap); //convert mat to bitmap
 
                 displayImage.setImageBitmap(x025Bitmap);
-                image = x025Bitmap;
+
                 //runOCR.setEnabled(true);
 
             } catch(Exception e) {
@@ -357,7 +454,7 @@ public class MainActivity extends AppCompatActivity {
 
                 Utils.bitmapToMat(srcBitmap, rgbMat);//convert original bitmap to Mat, R G B.
 
-                int mode = 0;
+                int mode = 1;
 
              /* Imgproc.cvtColor(rgbMat, grayMat, Imgproc.COLOR_RGB2GRAY);
                 Imgproc.bilateralFilter(grayMat,dstMat,5,30,30);
@@ -368,12 +465,16 @@ public class MainActivity extends AppCompatActivity {
                     Imgproc.pyrDown(x05Mat, x025Mat, new Size(x05Mat.cols()*0.5, x05Mat.rows()*0.5));
 
                     ImagePers imgprs = new ImagePers(x025Mat);
+                    System.out.println("-------------5654544444444444444444444444444444444");
                     Mat afterImgprsResult = imgprs.returnImg();
 
                     ROIs.clear();
                     detectText(afterImgprsResult);  // Tag All Text Regions.
 
                     dstBitmap = Bitmap.createBitmap((int)(srcBitmap.getWidth()*0.25), (int)(srcBitmap.getHeight()*0.25), Bitmap.Config.ARGB_8888);
+
+                    Utils.matToBitmap(afterImgprsResult, dstBitmap);
+                    image = dstBitmap;
 
                     if(mode == 0) {
                         Utils.matToBitmap(afterImgprsResult, dstBitmap);
@@ -389,13 +490,16 @@ public class MainActivity extends AppCompatActivity {
                 }
                 else
                 {
-                    ImagePers imgprs = new ImagePers(x025Mat);
+                    ImagePers imgprs = new ImagePers(rgbMat);
                     Mat afterImgprsResult = imgprs.returnImg();
 
                     ROIs.clear();
                     detectText(afterImgprsResult);  // Tag All Text Regions.
 
                     dstBitmap = Bitmap.createBitmap((int)(srcBitmap.getWidth()), (int)(srcBitmap.getHeight()), Bitmap.Config.ARGB_8888);
+
+                    Utils.matToBitmap(afterImgprsResult, dstBitmap);
+                    image = dstBitmap;
 
                     if(mode == 0) {
                         Utils.matToBitmap(afterImgprsResult, dstBitmap);
@@ -412,7 +516,7 @@ public class MainActivity extends AppCompatActivity {
 
                 System.out.println(ROIs.size() + "個\n");
                 displayImage.setImageBitmap(dstBitmap);
-                image = dstBitmap;
+
 
                 /*
                 dstBitmap = Bitmap.createBitmap(ROIs.get(4).width(), ROIs.get(4).height(), Bitmap.Config.ARGB_8888);
@@ -427,6 +531,8 @@ public class MainActivity extends AppCompatActivity {
                 e.printStackTrace();
             }
         }
+
+
     }
 
     @Override
@@ -953,5 +1059,41 @@ public class MainActivity extends AppCompatActivity {
         }else{
             Toast.makeText(getApplicationContext(), "No proper information to add to excel file!", Toast.LENGTH_LONG).show();
         }
+    }
+    public void checkPermission(){
+
+        if (Build.VERSION.SDK_INT >= 23) {
+            int REQUEST_CODE_CONTACT = 101;
+            String[] permissions = {Manifest.permission.WRITE_EXTERNAL_STORAGE};
+            //验证是否许可权限
+            for (String str : permissions) {
+                if (this.checkSelfPermission(str) != PackageManager.PERMISSION_GRANTED) {
+                    //申请权限
+                    this.requestPermissions(permissions, REQUEST_CODE_CONTACT);
+                    return;
+                }
+            }
+        }
+
+    }
+
+    public void createFile() {                 //上傳檔案到GoogleDrive
+        if(mDriveServiceHelper != null){
+            Log.d(TAG,"Create a file.");
+
+
+            mDriveServiceHelper.createFile()
+                    .addOnSuccessListener(fileId -> System.out.println(fileId))
+                    .addOnFailureListener(exception ->
+                            Log.e(TAG, "Couldn't create file.", exception));
+            Toast.makeText(this, " Upload excel files was successful!", Toast.LENGTH_LONG).show();
+
+        }else{
+            Toast.makeText(this, " Upload excel files was failed!", Toast.LENGTH_LONG).show();
+        }
+    }
+    public void signOut() {
+        client.signOut();
+        handleSignInResult(null);
     }
 }
