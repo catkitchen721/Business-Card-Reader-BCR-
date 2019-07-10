@@ -29,8 +29,8 @@
             android:orientation="horizontal"
             android:padding="2dp">
 
-            <TextView
-                android:id="@+id/textView7"
+            <Button
+                android:id="@+id/take_photo"
                 android:layout_width="match_parent"
                 android:layout_height="40dp"
                 android:layout_gravity="center_horizontal"
@@ -38,12 +38,12 @@
                 android:layout_weight="1"
                 android:background="#164578"
                 android:gravity="center"
-                android:text="Take Photo"
+                android:text="@string/take_photo"
                 android:textColor="#ffffff"
-                tools:text="Take Photo" />
+                android:onClick="openCamera" />
 
-            <TextView
-                android:id="@+id/textView8"
+            <Button
+                android:id="@+id/open_gallery"
                 android:layout_width="match_parent"
                 android:layout_height="40dp"
                 android:layout_gravity="center_horizontal"
@@ -51,9 +51,9 @@
                 android:layout_weight="1"
                 android:background="#164578"
                 android:gravity="center"
-                android:text="From Gallery"
+                android:text="@string/from_gallery"
                 android:textColor="#ffffff"
-                tools:text="From Gallery" />
+                android:onClick="openGallery" />
 
         </LinearLayout>
 
@@ -71,109 +71,107 @@
             android:text="Phone is Country Calling Codes prefix"
             android:textStyle="bold" />
 
-        <TextView
-            android:id="@+id/textView"
+        <Button
+            android:id="@+id/run_OCR"
             android:layout_width="match_parent"
             android:layout_height="40dp"
             android:layout_gravity="center_horizontal"
             android:layout_margin="4dp"
             android:layout_weight="1"
-            android:background="#164578"
             android:gravity="center"
-            android:text="Run OCR!"
+            android:text="@string/run_OCR"
             android:textColor="#ffffff"
-            tools:text="Run OCR!" />
+             />
 
         <TextView
+            android:id="@+id/display_the_result"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:background="#e4e3e3"
-            android:id="@+id/textView2"
             android:gravity="center"
             android:text="Here is the OCR text!"
             tools:text="Here is the OCR text!"/>
 
         <EditText
-            android:id="@+id/textView5"
+            android:id="@+id/result_name"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:background="#e4e3e3"
             android:ems="10"
             android:gravity="center"
-            android:inputType="textPersonName"
-            tools:text="Name" />
+            android:hint="Name"
+            android:inputType="textPersonName" />
 
         <EditText
-            android:id="@+id/textView4"
+            android:id="@+id/result_phone"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:background="#e4e3e3"
             android:ems="10"
             android:gravity="center"
-            android:inputType="phone"
-            tools:text="Phone" />
+            android:hint="Phone"
+            android:inputType="phone" />
 
         <EditText
-            android:id="@+id/textView3"
+            android:id="@+id/result_email"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:background="#e4e3e3"
             android:ems="10"
             android:gravity="center"
-            android:inputType="textEmailAddress"
-            tools:text="Email" />
+            android:hint="Email"
+            android:inputType="textEmailAddress" />
 
-        <TextView
-            android:id="@+id/textView9"
+        <Button
+            android:id="@+id/save_toExcel"
             android:layout_width="match_parent"
             android:layout_height="40dp"
             android:layout_gravity="center_horizontal"
             android:layout_margin="4dp"
             android:layout_weight="1"
-            android:background="#164578"
             android:gravity="center"
-            android:text="Info Correct! Save to Excel"
+            android:text="@string/save_toExcel"
             android:textColor="#ffffff"
-            tools:text="Info Correct! Save to Excel" />
+            android:onClick="toExcel"
+             />
 
-        <TextView
-            android:id="@+id/textView6"
+        <Button
+            android:id="@+id/add_toContact"
             android:layout_width="match_parent"
             android:layout_height="40dp"
             android:layout_gravity="center_horizontal"
             android:layout_margin="4dp"
             android:layout_weight="1"
-            android:background="#164578"
             android:gravity="center"
-            android:text="Add to Contacts!"
+            android:text="@string/add_toContact"
             android:textColor="#ffffff"
-            tools:text="Add to Contacts!" />
 
-        <TextView
+            tools:text="Add to Contacts!"
+            android:onClick="addToContacts"/>
+
+        <Button
             android:id="@+id/upload_button"
             android:layout_width="match_parent"
             android:layout_height="40dp"
             android:layout_gravity="center_horizontal"
             android:layout_margin="4dp"
             android:layout_weight="1"
-            android:background="#164578"
+            android:onClick="createFile"
             android:gravity="center"
-            android:text="UploadToGoogleDrive"
-            android:textColor="#ffffff"
-            tools:text="UploadToGoogleDrive" />
+            android:text="@string/upload_excel_toGD"
+            android:textColor="#ffffff" />
 
-        <TextView
+        <Button
             android:id="@+id/signout_button"
             android:layout_width="match_parent"
             android:layout_height="40dp"
             android:layout_gravity="center_horizontal"
             android:layout_margin="4dp"
             android:layout_weight="1"
-            android:background="#164578"
             android:gravity="center"
-            android:text="SignOutFromGoogleDrive"
+            android:text="@string/signOut_fromGD"
             android:textColor="#ffffff"
-            tools:text="UploadToGoogleDrive" />
+            android:onClick="signOut"/>
 
     </LinearLayout>
 

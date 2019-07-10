@@ -29,6 +29,7 @@ import android.os.Bundle;
 import android.util.Log;
 import android.view.Display;
 import android.view.View;
+import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.ImageView;
@@ -147,17 +148,17 @@ public class MainActivity extends AppCompatActivity {
     boolean recognitionSuccess = false;
 
     ImageView displayImage;
-    TextView runOCR;
+    Button runOCR;
     TextView displayText;
     EditText displayEmail;
     EditText displayPhone;
     EditText displayName;
-    TextView openContacts;
-    TextView takePhoto;
-    TextView fromGallery;
-    TextView toExcel;
-    TextView uploadGD;
-    TextView signOutGD;
+    Button openContacts;
+    Button takePhoto;
+    Button fromGallery;
+    Button toExcel;
+    Button uploadGD;
+    Button signOutGD;
     CheckBox isHanyu;
     CheckBox isCallingCode;
     SeekBar thresValue;
@@ -183,18 +184,18 @@ public class MainActivity extends AppCompatActivity {
         StrictMode.setVmPolicy(builder.build());
         builder.detectFileUriExposure();
 
-        runOCR = (TextView) findViewById(R.id.textView);
-        openContacts = (TextView) findViewById(R.id.textView6);
-        takePhoto = (TextView) findViewById(R.id.textView7);
-        fromGallery = (TextView) findViewById(R.id.textView8);
-        toExcel = (TextView) findViewById(R.id.textView9);
-        uploadGD = (TextView) findViewById(R.id.upload_button);
-        signOutGD = (TextView) findViewById(R.id.signout_button);
+        runOCR = (Button) findViewById(R.id.run_OCR);
+        openContacts = (Button) findViewById(R.id.add_toContact);
+        takePhoto = (Button) findViewById(R.id.take_photo);
+        fromGallery = (Button) findViewById(R.id.open_gallery);
+        toExcel = (Button) findViewById(R.id.save_toExcel);
+        uploadGD = (Button) findViewById(R.id.upload_button);
+        signOutGD = (Button) findViewById(R.id.signout_button);
 
-        displayText = (TextView) findViewById(R.id.textView2);
-        displayName = (EditText) findViewById(R.id.textView5);
-        displayPhone = (EditText) findViewById(R.id.textView4);
-        displayEmail = (EditText) findViewById(R.id.textView3);
+        displayText = (TextView) findViewById(R.id.display_the_result);
+        displayName = (EditText) findViewById(R.id.result_name);
+        displayPhone = (EditText) findViewById(R.id.result_phone);
+        displayEmail = (EditText) findViewById(R.id.result_email);
         displayImage = (ImageView) findViewById(R.id.imageView);
         isHanyu = (CheckBox) findViewById(R.id.isHanyu);
         isCallingCode = (CheckBox) findViewById(R.id.isCallingCode);
@@ -238,10 +239,24 @@ public class MainActivity extends AppCompatActivity {
 
         mTess.init(datapath, language);
 
+        if(Build.VERSION.SDK_INT>=21){
+            uploadGD.setBackgroundResource(R.drawable.ripple_sample);
+            signOutGD.setBackgroundResource(R.drawable.ripple_sample);
+            openContacts.setBackgroundResource(R.drawable.ripple_sample);
+            toExcel.setBackgroundResource(R.drawable.ripple_sample);
+            runOCR.setBackgroundResource(R.drawable.ripple_sample);
+            takePhoto.setBackgroundResource(R.drawable.ripple_sample);
+            fromGallery.setBackgroundResource(R.drawable.ripple_sample);
+        }
+
         //run the OCR on the test_image...
         runOCR.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                if(ROIs.size() == 0){
+                    Toast.makeText(getApplicationContext(), "You should take a picture first !", Toast.LENGTH_LONG).show();
+                    return;
+                }
                 loadingDialog = new AlertDialog.Builder(MainActivity.this)
                         .setMessage("Loading...")
                         .create();
@@ -267,39 +282,42 @@ public class MainActivity extends AppCompatActivity {
         });
 
         //Add the extracted info from Business Card to the phone's contacts...
-        openContacts.setOnClickListener(new View.OnClickListener(){
+        /*openContacts.setOnClickListener(new View.OnClickListener(){
             @Override
             public void onClick(View v) {
                 addToContacts();
             }
-        });
+        });*/
 
         //Take a photo...
+/*
         takePhoto.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
                 openCamera();
             }
         });
+*/
 
         //Choose a photo from gallery...
-        fromGallery.setOnClickListener(new View.OnClickListener() {
+    /*    fromGallery.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) { openGallery(); }
-        });
+        });*/
 
-        toExcel.setOnClickListener(new View.OnClickListener() {
+        /*toExcel.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) { toExcel(); }
-        });
-        uploadGD.setOnClickListener(new View.OnClickListener() {
+        });*/
+   /*     uploadGD.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) { createFile(); }
-        });
-        signOutGD.setOnClickListener(new View.OnClickListener() {
+        });*/
+
+      /*  signOutGD.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) { signOut(); }
-        });
+        });*/
 
         requestSignIn();
         checkPermission();
@@ -323,7 +341,8 @@ public class MainActivity extends AppCompatActivity {
         GoogleSignIn.getSignedInAccountFromIntent(result)
                 .addOnSuccessListener(googleAccount -> {            //確定取得Account與憑證
                     Log.d(TAG, "Signed in as " + googleAccount.getEmail());
-
+                    Toast.makeText(getApplicationContext(), "Signed in as " + googleAccount.getEmail() , Toast.LENGTH_LONG).show();
+                    signOutGD.setText(R.string.Signout_banner);
                     // Use the authenticated account to sign in to the Drive service.
                     GoogleAccountCredential credential =
                             GoogleAccountCredential.usingOAuth2(
@@ -342,6 +361,9 @@ public class MainActivity extends AppCompatActivity {
                     mDriveServiceHelper = new DriveServiceHelper(googleDriveService);
                 })
                 .addOnFailureListener(exception -> {
+                    signOutGD.setText(R.string.Signin_banner);
+                    Toast.makeText(getApplicationContext(), "Signed out." , Toast.LENGTH_LONG).show();
+
                     mDriveServiceHelper = null;
                     Log.e("123123132132132", "Unable to sign in.", exception);
                 });
@@ -352,7 +374,7 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
-        if (requestCode == REQUEST_CODE_SIGN_IN) {
+        if (requestCode == REQUEST_CODE_SIGN_IN) {              //RequestCode
             handleSignInResult(data);
         }
         if (requestCode != REQUEST_TO_CAMERA && requestCode != REQUEST_TO_GALLERY) {
@@ -983,7 +1005,7 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    private void addToContacts() {
+    public void addToContacts(View view) {
 
         // Creates a new Intent to insert a contact
         Intent intent = new Intent(ContactsContract.Intents.Insert.ACTION);
@@ -1012,7 +1034,7 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    public void openCamera() {
+    public void openCamera(View view) {
         Intent intent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
         timeSeed = System.currentTimeMillis();
         Log.d("名字", String.valueOf(timeSeed));
@@ -1031,7 +1053,7 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    public void openGallery() {
+    public void openGallery(View view) {
         Intent intent = new Intent(
                 Intent.ACTION_PICK,
                 android.provider.MediaStore.Images.Media.EXTERNAL_CONTENT_URI);
@@ -1052,7 +1074,7 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    public  void toExcel() {
+    public  void toExcel(View view) {
         if(!(displayName.getText().toString().equals("") || displayName.getText().toString().equals("None Name"))){
             ExcelExport ee = new ExcelExport(picturepath + "BCRInfoOutput.xls", displayName.getText().toString(), displayEmail.getText().toString(), displayPhone.getText().toString());
             Toast.makeText(getApplicationContext(), "Adding Information to excel files was successful!", Toast.LENGTH_LONG).show();
@@ -1061,6 +1083,8 @@ public class MainActivity extends AppCompatActivity {
         }
     }
     public void checkPermission(){
+
+
 
         if (Build.VERSION.SDK_INT >= 23) {
             int REQUEST_CODE_CONTACT = 101;
@@ -1077,7 +1101,7 @@ public class MainActivity extends AppCompatActivity {
 
     }
 
-    public void createFile() {                 //上傳檔案到GoogleDrive
+    public void createFile(View view) {                 //上傳檔案到GoogleDrive
         if(mDriveServiceHelper != null){
             Log.d(TAG,"Create a file.");
 
@@ -1091,9 +1115,17 @@ public class MainActivity extends AppCompatActivity {
         }else{
             Toast.makeText(this, " Upload excel files was failed!", Toast.LENGTH_LONG).show();
         }
+
     }
-    public void signOut() {
-        client.signOut();
-        handleSignInResult(null);
+    public void signOut(View view) {
+        if(mDriveServiceHelper == null){
+            requestSignIn();
+        }else{
+            client.signOut();
+            handleSignInResult(null);
+        }
+
+
+
     }
 }

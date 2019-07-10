@@ -1,3 +1,12 @@
 <resources>
     <string name="app_name">AndroidOCR</string>
+    <string name="Signin_banner">登入Google Account</string>
+    <string name="Signout_banner">登出Google Account</string>
+    <string name="upload_excel_toGD">上傳Excel到雲端</string>
+    <string name="signOut_fromGD">登出Google Account</string>
+    <string name="add_toContact">Add to Contacts!</string>
+    <string name="save_toExcel">Info Correct! Save to Excel</string>
+    <string name="run_OCR">Run OCR!</string>
+    <string name="take_photo">Take Photo</string>
+    <string name="from_gallery">From Gallery</string>
 </resources>
