@@ -9,4 +9,9 @@
     <string name="run_OCR">Run OCR!</string>
     <string name="take_photo">Take Photo</string>
     <string name="from_gallery">From Gallery</string>
+    <string name="drawer_open">Drawer opened</string>
+    <string name="drawer_close">Drawer closed</string>
+
+    <!-- TODO: Remove or change this placeholder text -->
+    <string name="hello_blank_fragment">Hello blank fragment</string>
 </resources>

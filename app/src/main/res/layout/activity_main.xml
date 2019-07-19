@@ -1,178 +1,194 @@
 <?xml version="1.0" encoding="utf-8"?>
-<ScrollView
-    xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:tools="http://schemas.android.com/tools"
-    android:layout_width="wrap_content"
-    android:layout_height="wrap_content"
-    android:id="@+id/scrollView" >
+<android.support.v4.widget.DrawerLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/drawerLayout"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
 
+
+    <!-- 主頁面 -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:orientation="vertical"
-        android:paddingLeft="@dimen/activity_horizontal_margin"
-        android:paddingRight="@dimen/activity_horizontal_margin"
-        android:paddingTop="@dimen/activity_vertical_margin"
-        android:paddingBottom="@dimen/activity_vertical_margin"
-        tools:context="com.example.androidocr.MainActivity">
+        android:orientation="vertical">
 
-        <ImageView
-            android:id="@+id/imageView"
-            android:layout_width="330dp"
-            android:layout_height="200dp"
-            android:src="#dddddd" />
+        <include layout="@layout/tool_bar" />
 
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:layout_margin="5dp"
-            android:orientation="horizontal"
-            android:padding="2dp">
+        <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+            xmlns:tools="http://schemas.android.com/tools"
+            android:id="@+id/scrollView"
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent">
 
-            <Button
-                android:id="@+id/take_photo"
+
+            <LinearLayout
                 android:layout_width="match_parent"
-                android:layout_height="40dp"
-                android:layout_gravity="center_horizontal"
-                android:layout_margin="4dp"
-                android:layout_weight="1"
-                android:background="#164578"
-                android:gravity="center"
-                android:text="@string/take_photo"
-                android:textColor="#ffffff"
-                android:onClick="openCamera" />
+                android:layout_height="match_parent"
+                android:orientation="vertical"
+                android:paddingBottom="@dimen/activity_vertical_margin"
+                android:paddingLeft="@dimen/activity_horizontal_margin"
+                android:paddingRight="@dimen/activity_horizontal_margin"
+                android:paddingTop="@dimen/activity_vertical_margin"
+                tools:context="com.example.androidocr.MainActivity">
 
-            <Button
-                android:id="@+id/open_gallery"
-                android:layout_width="match_parent"
-                android:layout_height="40dp"
-                android:layout_gravity="center_horizontal"
-                android:layout_margin="4dp"
-                android:layout_weight="1"
-                android:background="#164578"
-                android:gravity="center"
-                android:text="@string/from_gallery"
-                android:textColor="#ffffff"
-                android:onClick="openGallery" />
 
-        </LinearLayout>
+                <ImageView
+                    android:id="@+id/imageView"
+                    android:layout_width="330dp"
+                    android:layout_height="200dp"
+                    android:src="#dddddd" />
 
-        <CheckBox
-            android:id="@+id/isHanyu"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Name is Hanyu Pinyin"
-            android:textStyle="bold" />
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:layout_margin="5dp"
+                    android:orientation="horizontal"
+                    android:padding="2dp">
 
-        <CheckBox
-            android:id="@+id/isCallingCode"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Phone is Country Calling Codes prefix"
-            android:textStyle="bold" />
+                    <Button
+                        android:id="@+id/take_photo"
+                        android:layout_width="match_parent"
+                        android:layout_height="40dp"
+                        android:layout_gravity="center_horizontal"
+                        android:layout_margin="4dp"
+                        android:layout_weight="1"
+                        android:background="#164578"
+                        android:gravity="center"
+                        android:onClick="openCamera"
+                        android:text="@string/take_photo"
+                        android:textColor="#ffffff" />
 
-        <Button
-            android:id="@+id/run_OCR"
-            android:layout_width="match_parent"
-            android:layout_height="40dp"
-            android:layout_gravity="center_horizontal"
-            android:layout_margin="4dp"
-            android:layout_weight="1"
-            android:gravity="center"
-            android:text="@string/run_OCR"
-            android:textColor="#ffffff"
-             />
+                    <Button
+                        android:id="@+id/open_gallery"
+                        android:layout_width="match_parent"
+                        android:layout_height="40dp"
+                        android:layout_gravity="center_horizontal"
+                        android:layout_margin="4dp"
+                        android:layout_weight="1"
+                        android:background="#164578"
+                        android:gravity="center"
+                        android:onClick="openGallery"
+                        android:text="@string/from_gallery"
+                        android:textColor="#ffffff" />
 
-        <TextView
-            android:id="@+id/display_the_result"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:background="#e4e3e3"
-            android:gravity="center"
-            android:text="Here is the OCR text!"
-            tools:text="Here is the OCR text!"/>
+                </LinearLayout>
+                <!--
+                <CheckBox
+                    android:id="@+id/isHanyu"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Name is Hanyu Pinyin"
+                    android:textStyle="bold" />
 
-        <EditText
-            android:id="@+id/result_name"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:background="#e4e3e3"
-            android:ems="10"
-            android:gravity="center"
-            android:hint="Name"
-            android:inputType="textPersonName" />
+                <CheckBox
+                    android:id="@+id/isCallingCode"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Phone is Country Calling Codes prefix"
+                    android:textStyle="bold" />
+                -->
+                <Button
+                    android:id="@+id/run_OCR"
+                    android:layout_width="match_parent"
+                    android:layout_height="40dp"
+                    android:layout_gravity="center_horizontal"
+                    android:layout_margin="4dp"
+                    android:layout_weight="1"
+                    android:gravity="center"
+                    android:text="@string/run_OCR"
+                    android:textColor="#ffffff" />
 
-        <EditText
-            android:id="@+id/result_phone"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:background="#e4e3e3"
-            android:ems="10"
-            android:gravity="center"
-            android:hint="Phone"
-            android:inputType="phone" />
+                <TextView
+                    android:id="@+id/display_the_result"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:background="#e4e3e3"
+                    android:gravity="center"
+                    android:text="Here is the OCR text!"
+                    tools:text="Here is the OCR text!" />
 
-        <EditText
-            android:id="@+id/result_email"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:background="#e4e3e3"
-            android:ems="10"
-            android:gravity="center"
-            android:hint="Email"
-            android:inputType="textEmailAddress" />
+                <EditText
+                    android:id="@+id/result_name"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:background="#e4e3e3"
+                    android:ems="10"
+                    android:gravity="center"
+                    android:hint="Name"
+                    android:inputType="textPersonName" />
 
-        <Button
-            android:id="@+id/save_toExcel"
-            android:layout_width="match_parent"
-            android:layout_height="40dp"
-            android:layout_gravity="center_horizontal"
-            android:layout_margin="4dp"
-            android:layout_weight="1"
-            android:gravity="center"
-            android:text="@string/save_toExcel"
-            android:textColor="#ffffff"
-            android:onClick="toExcel"
-             />
+                <EditText
+                    android:id="@+id/result_phone"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:background="#e4e3e3"
+                    android:ems="10"
+                    android:gravity="center"
+                    android:hint="Phone"
+                    android:inputType="phone" />
 
-        <Button
-            android:id="@+id/add_toContact"
-            android:layout_width="match_parent"
-            android:layout_height="40dp"
-            android:layout_gravity="center_horizontal"
-            android:layout_margin="4dp"
-            android:layout_weight="1"
-            android:gravity="center"
-            android:text="@string/add_toContact"
-            android:textColor="#ffffff"
+                <EditText
+                    android:id="@+id/result_email"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:background="#e4e3e3"
+                    android:ems="10"
+                    android:gravity="center"
+                    android:hint="Email"
+                    android:inputType="textEmailAddress" />
 
-            tools:text="Add to Contacts!"
-            android:onClick="addToContacts"/>
+                <Button
+                    android:id="@+id/save_toExcel"
+                    android:layout_width="match_parent"
+                    android:layout_height="40dp"
+                    android:layout_gravity="center_horizontal"
+                    android:layout_margin="4dp"
+                    android:layout_weight="1"
+                    android:gravity="center"
+                    android:onClick="toExcel"
+                    android:text="@string/save_toExcel"
+                    android:textColor="#ffffff" />
 
-        <Button
-            android:id="@+id/upload_button"
-            android:layout_width="match_parent"
-            android:layout_height="40dp"
-            android:layout_gravity="center_horizontal"
-            android:layout_margin="4dp"
-            android:layout_weight="1"
-            android:onClick="createFile"
-            android:gravity="center"
-            android:text="@string/upload_excel_toGD"
-            android:textColor="#ffffff" />
+                <Button
+                    android:id="@+id/add_toContact"
+                    android:layout_width="match_parent"
+                    android:layout_height="40dp"
+                    android:layout_gravity="center_horizontal"
+                    android:layout_margin="4dp"
+                    android:layout_weight="1"
+                    android:gravity="center"
+                    android:onClick="addToContacts"
+                    android:text="@string/add_toContact"
 
-        <Button
-            android:id="@+id/signout_button"
-            android:layout_width="match_parent"
-            android:layout_height="40dp"
-            android:layout_gravity="center_horizontal"
-            android:layout_margin="4dp"
-            android:layout_weight="1"
-            android:gravity="center"
-            android:text="@string/signOut_fromGD"
-            android:textColor="#ffffff"
-            android:onClick="signOut"/>
+                    android:textColor="#ffffff"
+                    tools:text="Add to Contacts!" />
 
+                <Button
+                    android:id="@+id/upload_button"
+                    android:layout_width="match_parent"
+                    android:layout_height="40dp"
+                    android:layout_gravity="center_horizontal"
+                    android:layout_margin="4dp"
+                    android:layout_weight="1"
+                    android:gravity="center"
+                    android:onClick="createFile"
+                    android:text="@string/upload_excel_toGD"
+                    android:textColor="#ffffff" />
+
+
+
+            </LinearLayout>
+
+        </ScrollView>
     </LinearLayout>
+    <!-- 側拉選單 -->
+    <android.support.design.widget.NavigationView
+        android:id="@+id/navigation_view"
+        android:layout_width="240dp"
+        android:layout_height="match_parent"
+        android:layout_gravity="start"
+        app:headerLayout="@layout/navigation_header"
+        app:menu="@menu/drawer"
+        app:theme="@style/TextAppearance"/>
 
-</ScrollView>
+</android.support.v4.widget.DrawerLayout>

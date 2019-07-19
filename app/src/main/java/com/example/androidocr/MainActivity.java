@@ -2,7 +2,9 @@ package com.example.androidocr;
 
 import android.Manifest;
 import android.app.Activity;
+import android.content.ClipData;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.pm.ActivityInfo;
 import android.content.pm.PackageManager;
 import android.content.res.AssetManager;
@@ -20,14 +22,20 @@ import android.provider.ContactsContract;
 import android.provider.MediaStore;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
+import android.support.design.widget.NavigationView;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.support.v4.content.PermissionChecker;
+import android.support.v4.view.GravityCompat;
+import android.support.v4.widget.DrawerLayout;
+import android.support.v7.app.ActionBarDrawerToggle;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.support.v7.widget.Toolbar;
 import android.util.Log;
 import android.view.Display;
+import android.view.MenuItem;
 import android.view.View;
 import android.widget.Button;
 import android.widget.CheckBox;
@@ -82,6 +90,7 @@ import static org.opencv.imgproc.Imgproc.approxPolyDP;
 import static org.opencv.imgproc.Imgproc.erode;
 import static org.opencv.imgproc.Imgproc.getStructuringElement;
 import static org.opencv.imgproc.Imgproc.minAreaRect;
+
 import android.Manifest;
 import android.content.Intent;
 import android.content.pm.PackageManager;
@@ -91,6 +100,7 @@ import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
 import android.widget.Toast;
+
 
 import com.google.android.gms.auth.api.signin.GoogleSignIn;
 import com.google.android.gms.auth.api.signin.GoogleSignInAccount;
@@ -105,6 +115,7 @@ import com.google.api.services.drive.Drive;
 import com.google.api.services.drive.DriveScopes;
 
 import java.util.Collections;
+
 public class MainActivity extends AppCompatActivity {
     static {
         System.loadLibrary("opencv_java3");
@@ -118,7 +129,7 @@ public class MainActivity extends AppCompatActivity {
     };
 
 
-    public static int  REQUEST_CODE_SIGN_IN = 99;
+    public static int REQUEST_CODE_SIGN_IN = 99;
     private static final String TAG = "MainActivity";
     public DriveServiceHelper mDriveServiceHelper;
     private GoogleSignInClient client;
@@ -129,9 +140,9 @@ public class MainActivity extends AppCompatActivity {
     Mat sobelMat;
     Bitmap image;
     Vector<Bitmap> croppedImages;
-    Vector<Rect> TextRects  = new Vector<>(); //存放各個文字框
+    Vector<Rect> TextRects = new Vector<>(); //存放各個文字框
     Vector<Mat> ROIs = new Vector<>(); //用TextRects配合原圖 擷取出每個方框 存在ROIs
-    Point[] pts ;
+    Point[] pts;
     private TessBaseAPI mTess;
     String datapath = "";
     String picturepath = "";
@@ -147,30 +158,37 @@ public class MainActivity extends AppCompatActivity {
     boolean emailSuccess = false;
     boolean recognitionSuccess = false;
 
-    ImageView displayImage;
-    Button runOCR;
-    TextView displayText;
-    EditText displayEmail;
-    EditText displayPhone;
-    EditText displayName;
-    Button openContacts;
-    Button takePhoto;
-    Button fromGallery;
-    Button toExcel;
-    Button uploadGD;
-    Button signOutGD;
-    CheckBox isHanyu;
-    CheckBox isCallingCode;
-    SeekBar thresValue;
+    private ImageView displayImage;
+    private Button runOCR;
+    private TextView displayText;
+    private TextView accountName;
+    private EditText displayEmail;
+    private EditText displayPhone;
+    private EditText displayName;
+    private Button openContacts;
+    private Button takePhoto;
+    private Button fromGallery;
+    private Button toExcel;
+    private Button uploadGD;
+    //    private Button signOutGD;
+    //  private CheckBox isHanyu;
+    // private CheckBox isCallingCode;
+    // SeekBar thresValue;
+    private DrawerLayout drawerLayout;
+    private NavigationView navigation_view;
+    private Toolbar toolbar;
+    private Boolean hanyu_switchPref;
+    private Boolean countrycode_switchPref;
+
 
     private static final int REQUEST_EXTERNAL_STORAGE = 1;
     private static String[] PERMISSIONS_STORAGE = {
             "android.permission.READ_EXTERNAL_STORAGE",
-            "android.permission.WRITE_EXTERNAL_STORAGE" };
+            "android.permission.WRITE_EXTERNAL_STORAGE"};
 
     private static final int REQUEST_CAMERA = 2;
     private static String[] PERMISSIONS_CAMERA = {
-            "android.permission.CAMERA" };
+            "android.permission.CAMERA"};
 
     private static final int REQUEST_TO_CAMERA = 15;
     private static final int REQUEST_TO_GALLERY = 16;
@@ -190,16 +208,19 @@ public class MainActivity extends AppCompatActivity {
         fromGallery = (Button) findViewById(R.id.open_gallery);
         toExcel = (Button) findViewById(R.id.save_toExcel);
         uploadGD = (Button) findViewById(R.id.upload_button);
-        signOutGD = (Button) findViewById(R.id.signout_button);
+        //   signOutGD = (Button) findViewById(R.id.signout_button);
 
         displayText = (TextView) findViewById(R.id.display_the_result);
         displayName = (EditText) findViewById(R.id.result_name);
         displayPhone = (EditText) findViewById(R.id.result_phone);
         displayEmail = (EditText) findViewById(R.id.result_email);
         displayImage = (ImageView) findViewById(R.id.imageView);
-        isHanyu = (CheckBox) findViewById(R.id.isHanyu);
-        isCallingCode = (CheckBox) findViewById(R.id.isCallingCode);
-
+        //  isHanyu = (CheckBox) findViewById(R.id.isHanyu);
+        //  isCallingCode = (CheckBox) findViewById(R.id.isCallingCode);
+        drawerLayout = (DrawerLayout) findViewById(R.id.drawerLayout);
+        navigation_view = (NavigationView) findViewById(R.id.navigation_view);
+        toolbar = (Toolbar) findViewById(R.id.toolbar);
+        accountName = navigation_view.getHeaderView(0).findViewById(R.id.email_name);
         LineMat = new Mat();
         dilaMat = new Mat();
         gMat = new Mat();
@@ -219,8 +240,8 @@ public class MainActivity extends AppCompatActivity {
         displayEmail.setFocusableInTouchMode(false);
 
         //initialize hanyu check
-        isHanyu.setChecked(true);
-        isCallingCode.setChecked(true);
+        // isHanyu.setChecked(true);
+        // isCallingCode.setChecked(true);
 
         //init image
         image = BitmapFactory.decodeResource(getResources(), R.drawable.test_image3);
@@ -231,7 +252,7 @@ public class MainActivity extends AppCompatActivity {
 
         //initialize Tesseract API
         String language = "eng";
-        trainLan = "tessdata/"+language+".traineddata";
+        trainLan = "tessdata/" + language + ".traineddata";
         datapath = getFilesDir() + "/tesseract/";
         mTess = new TessBaseAPI();
 
@@ -239,9 +260,9 @@ public class MainActivity extends AppCompatActivity {
 
         mTess.init(datapath, language);
 
-        if(Build.VERSION.SDK_INT>=21){
+        if (Build.VERSION.SDK_INT >= 21) {
             uploadGD.setBackgroundResource(R.drawable.ripple_sample);
-            signOutGD.setBackgroundResource(R.drawable.ripple_sample);
+            //      signOutGD.setBackgroundResource(R.drawable.ripple_sample);
             openContacts.setBackgroundResource(R.drawable.ripple_sample);
             toExcel.setBackgroundResource(R.drawable.ripple_sample);
             runOCR.setBackgroundResource(R.drawable.ripple_sample);
@@ -253,7 +274,7 @@ public class MainActivity extends AppCompatActivity {
         runOCR.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                if(ROIs.size() == 0){
+                if (ROIs.size() == 0) {
                     Toast.makeText(getApplicationContext(), "You should take a picture first !", Toast.LENGTH_LONG).show();
                     return;
                 }
@@ -281,45 +302,73 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        //Add the extracted info from Business Card to the phone's contacts...
-        /*openContacts.setOnClickListener(new View.OnClickListener(){
-            @Override
-            public void onClick(View v) {
-                addToContacts();
-            }
-        });*/
 
-        //Take a photo...
-/*
-        takePhoto.setOnClickListener(new View.OnClickListener() {
+        // 用toolbar做為APP的ActionBar
+        setSupportActionBar(toolbar);
+
+        // 將drawerLayout和toolbar整合，會出現「三」按鈕
+        ActionBarDrawerToggle toggle = new ActionBarDrawerToggle(
+                this, drawerLayout, toolbar, R.string.drawer_open, R.string.drawer_close);
+        drawerLayout.addDrawerListener(toggle);
+        toggle.syncState();
+
+
+        // 為navigatin_view設置點擊事件
+        navigation_view.setNavigationItemSelectedListener(new NavigationView.OnNavigationItemSelectedListener() {
             @Override
-            public void onClick(View view) {
-                openCamera();
+            public boolean onNavigationItemSelected(@NonNull MenuItem item) {
+
+                // 點選時收起選單
+                drawerLayout.closeDrawer(GravityCompat.START);
+
+                // 取得選項id
+                int id = item.getItemId();
+
+                // 依照id判斷點了哪個項目並做相應事件
+                if (id == R.id.action_logging) {
+                    // 按下「登入/登出」要做的事
+                    if (mDriveServiceHelper == null) {
+                        requestSignIn();
+                    } else {
+                        client.signOut();
+                        handleSignInResult(null);
+                    }
+                    return true;
+                } else if (id == R.id.action_settings) {
+                    // 按下「設定」要做的事
+                    Toast.makeText(MainActivity.this, "設定", Toast.LENGTH_SHORT).show();
+                    Intent intent = new Intent(getApplicationContext(), SettingsActivity.class);
+                    startActivity(intent);
+                    return true;
+                } else if (id == R.id.action_help) {
+                    // 按下「使用說明」要做的事
+                    Toast.makeText(MainActivity.this, "使用說明", Toast.LENGTH_SHORT).show();
+                    return true;
+                } else if (id == R.id.action_about) {
+                    // 按下「關於」要做的事
+                    Toast.makeText(MainActivity.this, "關於你的歌", Toast.LENGTH_SHORT).show();
+                    return true;
+                }
+                // 略..
+
+                return false;
             }
         });
-*/
+        // 還原設定中的Values
+        android.support.v7.preference.PreferenceManager
+                .setDefaultValues(this, R.xml.preferences, false);
+        SharedPreferences sharedPref =
+                android.support.v7.preference.PreferenceManager
+                        .getDefaultSharedPreferences(this);
+        hanyu_switchPref = sharedPref.getBoolean
+                (SettingsActivity.KEY_PREF_HANYU_SWITCH, false);
+        countrycode_switchPref = sharedPref.getBoolean
+                (SettingsActivity.KEY_PREF_COUNTRYCODE_SWITCH, false);
 
-        //Choose a photo from gallery...
-    /*    fromGallery.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) { openGallery(); }
-        });*/
 
-        /*toExcel.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) { toExcel(); }
-        });*/
-   /*     uploadGD.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) { createFile(); }
-        });*/
-
-      /*  signOutGD.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) { signOut(); }
-        });*/
-
+        // 請求登入Google Acoount
         requestSignIn();
+        // 請求系統權限
         checkPermission();
     }
 
@@ -341,8 +390,10 @@ public class MainActivity extends AppCompatActivity {
         GoogleSignIn.getSignedInAccountFromIntent(result)
                 .addOnSuccessListener(googleAccount -> {            //確定取得Account與憑證
                     Log.d(TAG, "Signed in as " + googleAccount.getEmail());
-                    Toast.makeText(getApplicationContext(), "Signed in as " + googleAccount.getEmail() , Toast.LENGTH_LONG).show();
-                    signOutGD.setText(R.string.Signout_banner);
+                    Toast.makeText(getApplicationContext(), "Signed in as " + googleAccount.getEmail(), Toast.LENGTH_LONG).show();
+                    navigation_view.getMenu().findItem(R.id.action_logging).setTitle("登出Google Account");
+                    accountName.setText("登入狀態:" + googleAccount.getEmail());
+                    //    signOutGD.setText(R.string.Signout_banner);
                     // Use the authenticated account to sign in to the Drive service.
                     GoogleAccountCredential credential =
                             GoogleAccountCredential.usingOAuth2(
@@ -361,8 +412,11 @@ public class MainActivity extends AppCompatActivity {
                     mDriveServiceHelper = new DriveServiceHelper(googleDriveService);
                 })
                 .addOnFailureListener(exception -> {
-                    signOutGD.setText(R.string.Signin_banner);
-                    Toast.makeText(getApplicationContext(), "Signed out." , Toast.LENGTH_LONG).show();
+                    navigation_view.getMenu().findItem(R.id.action_logging).setTitle(R.string.Signin_banner);
+                    navigation_view.getMenu().findItem(R.id.action_logging).setTitle("登入Google Account");
+                    accountName.setText("登入狀態:尚未登入");
+                    //      signOutGD.setText(R.string.Signin_banner);
+                    Toast.makeText(getApplicationContext(), "Signed out.", Toast.LENGTH_LONG).show();
 
                     mDriveServiceHelper = null;
                     Log.e("123123132132132", "Unable to sign in.", exception);
@@ -399,7 +453,7 @@ public class MainActivity extends AppCompatActivity {
                 //Mat brightMat = new Mat();
                 Bitmap srcBitmap = BitmapFactory.decodeFile(new File(picturepath, String.valueOf(timeSeed) + ".jpg").toString());
                 Bitmap dstBitmap = Bitmap.createBitmap(srcBitmap.getWidth(), srcBitmap.getHeight(), Bitmap.Config.RGB_565);
-                Bitmap x025Bitmap = Bitmap.createBitmap(srcBitmap.getWidth()/4, srcBitmap.getHeight()/4, Bitmap.Config.ARGB_8888);
+                Bitmap x025Bitmap = Bitmap.createBitmap(srcBitmap.getWidth() / 4, srcBitmap.getHeight() / 4, Bitmap.Config.ARGB_8888);
                 Utils.bitmapToMat(srcBitmap, rgbMat);//convert original bitmap to Mat, R G B.
 
             /* Tempararyly remove bright function.
@@ -409,8 +463,8 @@ public class MainActivity extends AppCompatActivity {
             /* Tempararyly remove threshold function.
             Imgproc.threshold(grayMat, thsMat, threshold_value, 255, Imgproc.THRESH_TOZERO);
             */
-                Imgproc.pyrDown(rgbMat, x05Mat, new Size(rgbMat.cols()*0.5, rgbMat.rows()*0.5));
-                Imgproc.pyrDown(x05Mat, x025Mat, new Size(x05Mat.cols()*0.5, x05Mat.rows()*0.5));
+                Imgproc.pyrDown(rgbMat, x05Mat, new Size(rgbMat.cols() * 0.5, rgbMat.rows() * 0.5));
+                Imgproc.pyrDown(x05Mat, x025Mat, new Size(x05Mat.cols() * 0.5, x05Mat.rows() * 0.5));
 
                 ImagePers imgprs = new ImagePers(x025Mat);
                 Mat afterImgprsResult = imgprs.returnImg();
@@ -422,15 +476,15 @@ public class MainActivity extends AppCompatActivity {
                 image = x025Bitmap;
 
                 int mode = 1;
-                if(mode == 0) {
+                if (mode == 0) {
                     Utils.matToBitmap(afterImgprsResult, x025Bitmap);
-                }else if(mode == 1) {
+                } else if (mode == 1) {
                     Utils.matToBitmap(LineMat, x025Bitmap);
-                }else if(mode == 2) {
+                } else if (mode == 2) {
                     Utils.matToBitmap(dilaMat, x025Bitmap);
-                }else if(mode == 3) {
+                } else if (mode == 3) {
                     Utils.matToBitmap(gMat, x025Bitmap);
-                }else if(mode == 4){
+                } else if (mode == 4) {
                     Utils.matToBitmap(sobelMat, x025Bitmap);
                 }
                 //Utils.matToBitmap(x025Mat, x025Bitmap); //convert mat to bitmap
@@ -440,7 +494,7 @@ public class MainActivity extends AppCompatActivity {
 
                 //runOCR.setEnabled(true);
 
-            } catch(Exception e) {
+            } catch (Exception e) {
                 e.printStackTrace();
             }
         }
@@ -481,10 +535,9 @@ public class MainActivity extends AppCompatActivity {
              /* Imgproc.cvtColor(rgbMat, grayMat, Imgproc.COLOR_RGB2GRAY);
                 Imgproc.bilateralFilter(grayMat,dstMat,5,30,30);
                 Imgproc.cvtColor(grayMat,rgbMat,Imgproc.COLOR_GRAY2RGB);*/
-                if(rgbMat.cols() > 1500 && rgbMat.rows() > 1500)
-                {
-                    Imgproc.pyrDown(rgbMat, x05Mat, new Size(rgbMat.cols()*0.5, rgbMat.rows()*0.5));
-                    Imgproc.pyrDown(x05Mat, x025Mat, new Size(x05Mat.cols()*0.5, x05Mat.rows()*0.5));
+                if (rgbMat.cols() > 1500 && rgbMat.rows() > 1500) {
+                    Imgproc.pyrDown(rgbMat, x05Mat, new Size(rgbMat.cols() * 0.5, rgbMat.rows() * 0.5));
+                    Imgproc.pyrDown(x05Mat, x025Mat, new Size(x05Mat.cols() * 0.5, x05Mat.rows() * 0.5));
 
                     ImagePers imgprs = new ImagePers(x025Mat);
                     System.out.println("-------------5654544444444444444444444444444444444");
@@ -493,45 +546,43 @@ public class MainActivity extends AppCompatActivity {
                     ROIs.clear();
                     detectText(afterImgprsResult);  // Tag All Text Regions.
 
-                    dstBitmap = Bitmap.createBitmap((int)(srcBitmap.getWidth()*0.25), (int)(srcBitmap.getHeight()*0.25), Bitmap.Config.ARGB_8888);
+                    dstBitmap = Bitmap.createBitmap((int) (srcBitmap.getWidth() * 0.25), (int) (srcBitmap.getHeight() * 0.25), Bitmap.Config.ARGB_8888);
 
                     Utils.matToBitmap(afterImgprsResult, dstBitmap);
                     image = dstBitmap;
 
-                    if(mode == 0) {
+                    if (mode == 0) {
                         Utils.matToBitmap(afterImgprsResult, dstBitmap);
-                    }else if(mode == 1) {
+                    } else if (mode == 1) {
                         Utils.matToBitmap(LineMat, dstBitmap);
-                    }else if(mode == 2) {
+                    } else if (mode == 2) {
                         Utils.matToBitmap(dilaMat, dstBitmap);
-                    }else if(mode == 3) {
+                    } else if (mode == 3) {
                         Utils.matToBitmap(gMat, dstBitmap);
-                    }else if(mode == 4){
+                    } else if (mode == 4) {
                         Utils.matToBitmap(sobelMat, dstBitmap);
                     }
-                }
-                else
-                {
+                } else {
                     ImagePers imgprs = new ImagePers(rgbMat);
                     Mat afterImgprsResult = imgprs.returnImg();
 
                     ROIs.clear();
                     detectText(afterImgprsResult);  // Tag All Text Regions.
 
-                    dstBitmap = Bitmap.createBitmap((int)(srcBitmap.getWidth()), (int)(srcBitmap.getHeight()), Bitmap.Config.ARGB_8888);
+                    dstBitmap = Bitmap.createBitmap((int) (srcBitmap.getWidth()), (int) (srcBitmap.getHeight()), Bitmap.Config.ARGB_8888);
 
                     Utils.matToBitmap(afterImgprsResult, dstBitmap);
                     image = dstBitmap;
 
-                    if(mode == 0) {
+                    if (mode == 0) {
                         Utils.matToBitmap(afterImgprsResult, dstBitmap);
-                    }else if(mode == 1) {
+                    } else if (mode == 1) {
                         Utils.matToBitmap(LineMat, dstBitmap);
-                    }else if(mode == 2) {
+                    } else if (mode == 2) {
                         Utils.matToBitmap(dilaMat, dstBitmap);
-                    }else if(mode == 3) {
+                    } else if (mode == 3) {
                         Utils.matToBitmap(gMat, dstBitmap);
-                    }else if(mode == 4){
+                    } else if (mode == 4) {
                         Utils.matToBitmap(sobelMat, dstBitmap);
                     }
                 }
@@ -549,7 +600,7 @@ public class MainActivity extends AppCompatActivity {
 
                 //runOCR.setEnabled(true);
 
-            } catch(Exception e) {
+            } catch (Exception e) {
                 e.printStackTrace();
             }
         }
@@ -571,40 +622,34 @@ public class MainActivity extends AppCompatActivity {
 
     public static void verifyStoragePermissions(Activity activity) {
         //Android6.0權限解決
-        try
-        {
+        try {
             //write is ok?
             int write_permission = PermissionChecker.checkSelfPermission(activity,
                     "android.permission.WRITE_EXTERNAL_STORAGE");
             //camera is ok?
             int camera_permission = PermissionChecker.checkSelfPermission(activity,
                     "android.permission.CAMERA");
-            if (write_permission != PackageManager.PERMISSION_GRANTED)
-            {
+            if (write_permission != PackageManager.PERMISSION_GRANTED) {
                 //if no write permission, ask user
                 Log.d("ask write", "ask now");
                 ActivityCompat.requestPermissions(activity, PERMISSIONS_STORAGE, REQUEST_EXTERNAL_STORAGE);
-            }
-            else if(camera_permission != PackageManager.PERMISSION_GRANTED)
-            {
+            } else if (camera_permission != PackageManager.PERMISSION_GRANTED) {
                 //if no camera permission, ask user
                 Log.d("ask camera", "ask now");
                 ActivityCompat.requestPermissions(activity, PERMISSIONS_CAMERA, REQUEST_CAMERA);
             }
-        }
-        catch (Exception e)
-        {
+        } catch (Exception e) {
             e.printStackTrace();
         }
     }
 
     // CV Function Region
-    public Mat blur(Mat rgbMat){
+    public Mat blur(Mat rgbMat) {
         Mat dstMat = new Mat();
         Mat aaMat = new Mat();
 
-        Imgproc.cvtColor(rgbMat,aaMat,COLOR_RGB2GRAY);
-        Imgproc.bilateralFilter(aaMat,dstMat,300,200,200);
+        Imgproc.cvtColor(rgbMat, aaMat, COLOR_RGB2GRAY);
+        Imgproc.bilateralFilter(aaMat, dstMat, 300, 200, 200);
         rgbMat = dstMat.clone();
         return rgbMat;
     }
@@ -647,23 +692,23 @@ public class MainActivity extends AppCompatActivity {
         // 在rects這個Vector<RotatedRect>中 訪問每個element並畫出邊線框
 
         LineMat = rgbMat.clone();
-        for(RotatedRect rect : rects){
+        for (RotatedRect rect : rects) {
             org.opencv.core.Point[] P = new org.opencv.core.Point[4];
             rect.points(P);
-            for(int j = 0 ; j <= 3; j++){
-                Imgproc.line(LineMat,P[j],P[(j+1)%4], new Scalar(255,0,0,255),2);
+            for (int j = 0; j <= 3; j++) {
+                Imgproc.line(LineMat, P[j], P[(j + 1) % 4], new Scalar(255, 0, 0, 255), 2);
             }
         }
 
 
         Log.d("畫線", "畫完了");
         //在TextRects這個Vector<Rect>中 用每一個element從原圖中擷取ROI區域 並放進ROIs這個Vector<Mat>中
-        for(Rect rect : TextRects){
-            if(rect.x + rect.width > rgbMat.cols())
+        for (Rect rect : TextRects) {
+            if (rect.x + rect.width > rgbMat.cols())
                 continue;
-            if(rect.y + rect.height > rgbMat.rows())
+            if (rect.y + rect.height > rgbMat.rows())
                 continue;
-            Mat roi_img = new Mat(rgbMat,rect);
+            Mat roi_img = new Mat(rgbMat, rect);
             ROIs.add(roi_img);
         }
         Log.d("ROI做完沒", "做完了");
@@ -684,7 +729,7 @@ public class MainActivity extends AppCompatActivity {
         Imgproc.dilate(bi, dlt1, element1);
         return  dlt1;*/
         Mat sobel = new Mat();
-        Imgproc.Sobel(gray, sobel, CvType.CV_8U,1, 0, 3,1, 0);
+        Imgproc.Sobel(gray, sobel, CvType.CV_8U, 1, 0, 3, 1, 0);
         sobelMat = sobel.clone();
 
         //////////// See the Sobel /////////////
@@ -715,23 +760,21 @@ public class MainActivity extends AppCompatActivity {
 
         final Size kernelSize1 = new Size(20, 8);
         final Size kernelSize2 = new Size(24, 7);
-        final Size kernelSize3 = new Size(10,9);
+        final Size kernelSize3 = new Size(10, 9);
 
         Mat element1 = Imgproc.getStructuringElement(Imgproc.MORPH_RECT, kernelSize1);
         Mat element2 = Imgproc.getStructuringElement(Imgproc.MORPH_RECT, kernelSize2);
         Mat element3 = Imgproc.getStructuringElement(Imgproc.MORPH_RECT, kernelSize3);
 
         Mat dilate1 = new Mat();
-        Imgproc.dilate(binary,dilate1,element1);
+        Imgproc.dilate(binary, dilate1, element1);
 
 
         Mat erode1 = new Mat();
-        Imgproc.erode(dilate1,erode1,element2);
+        Imgproc.erode(dilate1, erode1, element2);
 
         Mat dilate2 = new Mat();
-        Imgproc.dilate(erode1,dilate2,element3,anchor,iterations);
-
-
+        Imgproc.dilate(erode1, dilate2, element3, anchor, iterations);
 
 
         return dilate2;
@@ -762,17 +805,17 @@ public class MainActivity extends AppCompatActivity {
         return  rects;*/
         Vector<RotatedRect> rects = new Vector<>();
         List<MatOfPoint> contours = new ArrayList<>();
-        Imgproc.findContours(img, contours, new Mat(), Imgproc.RETR_EXTERNAL,Imgproc.CHAIN_APPROX_SIMPLE);
+        Imgproc.findContours(img, contours, new Mat(), Imgproc.RETR_EXTERNAL, Imgproc.CHAIN_APPROX_SIMPLE);
         //因為minAreaRect裡的parameter吃的是MatOfPoint2f
         List<org.opencv.core.MatOfPoint2f> contoursTemp = new ArrayList<>();
-        for(MatOfPoint point : contours) {
+        for (MatOfPoint point : contours) {
             org.opencv.core.MatOfPoint2f newPoint = new org.opencv.core.MatOfPoint2f(point.toArray());
             contoursTemp.add(newPoint);
         }
 
-        for(int i = 0; i < contours.size(); i++){
+        for (int i = 0; i < contours.size(); i++) {
             double area = Imgproc.contourArea(contours.get(i));
-            if(area < 2000)
+            if (area < 2000)
                 continue;
 
             RotatedRect rect = Imgproc.minAreaRect(contoursTemp.get(i));
@@ -780,7 +823,7 @@ public class MainActivity extends AppCompatActivity {
             int m_width = rect.boundingRect().width;
             int m_height = rect.boundingRect().height;
 
-            if(m_height > m_width * 1.2 || m_width - m_height <= 1 || (Math.abs(rect.angle) >= 15.0 && Math.abs(rect.angle) <= 85.0))
+            if (m_height > m_width * 1.2 || m_width - m_height <= 1 || (Math.abs(rect.angle) >= 15.0 && Math.abs(rect.angle) <= 85.0))
                 continue;
 
             System.out.println(rect.angle);
@@ -790,19 +833,17 @@ public class MainActivity extends AppCompatActivity {
             Log.d("做完沒", "還沒");
             pts = new Point[4];
             rect.points(pts);   //提取RotatedRect中的四個頂點 放進pts[4]
-            int xx = (int)rect.boundingRect().tl().x;
-            int yy = (int)rect.boundingRect().tl().y;
-            if(xx < 0) xx = 0;
-            if(yy < 0) yy = 0;
-            if(xx + m_width >= img.cols()) m_width = img.cols() - xx;
-            if(yy + m_height >= img.rows()) m_height = img.rows() - yy;
-            Rect TextRect = new Rect(xx,yy,m_width,m_height); //利用RotatedRect的左上頂點座標，做出Rect
+            int xx = (int) rect.boundingRect().tl().x;
+            int yy = (int) rect.boundingRect().tl().y;
+            if (xx < 0) xx = 0;
+            if (yy < 0) yy = 0;
+            if (xx + m_width >= img.cols()) m_width = img.cols() - xx;
+            if (yy + m_height >= img.rows()) m_height = img.rows() - yy;
+            Rect TextRect = new Rect(xx, yy, m_width, m_height); //利用RotatedRect的左上頂點座標，做出Rect
             TextRects.add(TextRect); //做出的Rect 放進Vector<Rect>
 
 
-
         }
-
 
 
         return rects;
@@ -810,7 +851,7 @@ public class MainActivity extends AppCompatActivity {
 
     // CV Function Region
 
-    public void processImageTail(){
+    public void processImageTail() {
 
         displayName.setFocusable(true);
         displayName.setEnabled(true);
@@ -845,7 +886,7 @@ public class MainActivity extends AppCompatActivity {
         //runOCR.setEnabled(false);
     }
 
-    public void processImageCounting(){
+    public void processImageCounting() {
         /*
         String OCRresult = null;
         mTess.setImage(image);
@@ -861,14 +902,14 @@ public class MainActivity extends AppCompatActivity {
         String AllResult = "";
 
         //抓出每個ROI來辨識
-        for(Mat rgbMat : ROIs){
+        for (Mat rgbMat : ROIs) {
             Bitmap dstBitmap = Bitmap.createBitmap(rgbMat.width(), rgbMat.height(), Bitmap.Config.ARGB_8888);
             Utils.matToBitmap(rgbMat, dstBitmap);
             mTess.setImage(dstBitmap);
             OCRresult = mTess.getUTF8Text();
             //      displayImage.setImageBitmap(dstBitmap);
             System.out.println(OCRresult);
-            AllResult = OCRresult + "\n" +  AllResult   ;
+            AllResult = OCRresult + "\n" + AllResult;
         }
         //displayText.append(AllResult);
         extractName(AllResult);
@@ -876,25 +917,21 @@ public class MainActivity extends AppCompatActivity {
         extractPhone(AllResult);
     }
 
-    public void extractName(String str){
+    public void extractName(String str) {
         System.out.println("Getting the Name");
         String NAME_REGEX = "^([A-Z]([a-z]*|\\.) *){1,2}([A-Z][a-z]+-?)+($|([,].+$))";
-        if(isHanyu.isChecked())
-        {
+        if (hanyu_switchPref) {
             NAME_REGEX = "^([A-Z]([a-z]){1,4}([\\s-][A-Z]([a-z]){1,4})|[A-Z]([a-z]){1,4})\\s([A-Z]([a-z]){1,4}){1,3}$";
-        }
-        else
-        {
+        } else {
             NAME_REGEX = "^([A-Z]([a-z]*|\\.) *){1,2}([A-Z][a-z]+-?)+($|([,].+$))";
         }
         Pattern p = Pattern.compile(NAME_REGEX, Pattern.MULTILINE);
-        Matcher m =  p.matcher(str);
-        if(m.find()){
+        Matcher m = p.matcher(str);
+        if (m.find()) {
             System.out.println(m.group());
             displayName.setText(m.group());
             nameSuccess = true;
-        }
-        else{
+        } else {
             displayName.setText("None Name");
             nameSuccess = false;
             recognitionSuccess = false;
@@ -908,47 +945,40 @@ public class MainActivity extends AppCompatActivity {
         final String EMAIL_REGEX = "^.*[@\\xc2\\xae].*$";
         Pattern p = Pattern.compile(EMAIL_REGEX, Pattern.MULTILINE);
         Matcher m = p.matcher(str);   // get a matcher object
-        if(m.find()){
+        if (m.find()) {
             System.out.println(m.group());
             displayEmail.setText(m.group());
             emailSuccess = true;
-            if(nameSuccess)
-            {
+            if (nameSuccess) {
                 recognitionSuccess = true;
             }
-        }
-        else{
+        } else {
             displayEmail.setText("None Email");
             emailSuccess = false;
         }
     }
 
-    public void extractPhone(String str){
+    public void extractPhone(String str) {
         System.out.println("Getting Phone Number");
         //final String PHONE_REGEX="(?:^|\\D)(\\d{3})[)\\-. ]*?(\\d{3})[\\-. ]*?(\\d{4})(?:$|\\D)";
-        String PHONE_REGEX="\\(?\\d{2,3}\\)?[\\s\\-\\x12\\x94\\x80]?\\d{3,4}[\\s\\-\\x12\\x94\\x80]?\\d{4}";
+        String PHONE_REGEX = "\\(?\\d{2,3}\\)?[\\s\\-\\x12\\x94\\x80]?\\d{3,4}[\\s\\-\\x12\\x94\\x80]?\\d{4}";
 
-        if(isCallingCode.isChecked())
-        {
-            PHONE_REGEX="(\\+)?(1-)?\\(?(\\+)?\\d{2,3}\\)?[\\s\\-\\x12\\x94\\x80]?\\d{1,2}\\)?[\\s\\-\\x12\\x94\\x80]\\d{3,4}[\\s\\-\\x12\\x94\\x80]?\\d{4}";
-        }
-        else
-        {
-            PHONE_REGEX="\\(?\\d{2,3}\\)?[\\s\\-\\x12\\x94\\x80]?\\d{3,4}[\\s\\-\\x12\\x94\\x80]?\\d{4}";
+        if (countrycode_switchPref) {
+            PHONE_REGEX = "(\\+)?(1-)?\\(?(\\+)?\\d{2,3}\\)?[\\s\\-\\x12\\x94\\x80]?\\d{1,2}\\)?[\\s\\-\\x12\\x94\\x80]\\d{3,4}[\\s\\-\\x12\\x94\\x80]?\\d{4}";
+        } else {
+            PHONE_REGEX = "\\(?\\d{2,3}\\)?[\\s\\-\\x12\\x94\\x80]?\\d{3,4}[\\s\\-\\x12\\x94\\x80]?\\d{4}";
         }
 
         Pattern p = Pattern.compile(PHONE_REGEX, Pattern.MULTILINE);
         Matcher m = p.matcher(str);   // get a matcher object
-        if(m.find()){
+        if (m.find()) {
             System.out.println(m.group());
             displayPhone.setText(m.group());
             phoneSuccess = true;
-            if(nameSuccess)
-            {
+            if (nameSuccess) {
                 recognitionSuccess = true;
             }
-        }
-        else{
+        } else {
             displayPhone.setText("None Phone");
             phoneSuccess = false;
         }
@@ -956,19 +986,19 @@ public class MainActivity extends AppCompatActivity {
 
     public void createFolder(File dir) {
         //directory does not exist, we create it
-        if (!dir.exists()){
+        if (!dir.exists()) {
             dir.mkdirs();
         }
     }
 
     private void checkFile(File dir) {
         //directory does not exist, but we can successfully create it
-        if (!dir.exists() && dir.mkdirs()){
+        if (!dir.exists() && dir.mkdirs()) {
             copyFiles();
         }
         //The directory exists, but there is no data file in it
-        if(dir.exists()) {
-            String datafilepath = datapath+"/"+trainLan;
+        if (dir.exists()) {
+            String datafilepath = datapath + "/" + trainLan;
             File datafile = new File(datafilepath);
             if (!datafile.exists()) {
                 copyFiles();
@@ -979,7 +1009,7 @@ public class MainActivity extends AppCompatActivity {
     private void copyFiles() {
         try {
             //location we want the file to be at
-            String filepath = datapath + "/"+trainLan;
+            String filepath = datapath + "/" + trainLan;
 
             //get access to AssetManager
             AssetManager assetManager = getAssets();
@@ -1013,7 +1043,7 @@ public class MainActivity extends AppCompatActivity {
         intent.setType(ContactsContract.RawContacts.CONTENT_TYPE);
 
         //Checks if we have the name, email and phone number...
-        if(!(displayName.getText().toString().equals("") || displayName.getText().toString().equals("None Name"))){
+        if (!(displayName.getText().toString().equals("") || displayName.getText().toString().equals("None Name"))) {
             //Adds the name...
             intent.putExtra(ContactsContract.Intents.Insert.NAME, displayName.getText().toString());
 
@@ -1029,7 +1059,7 @@ public class MainActivity extends AppCompatActivity {
 
             //starting the activity...
             startActivity(intent);
-        }else{
+        } else {
             Toast.makeText(getApplicationContext(), "No information to add to contacts!", Toast.LENGTH_LONG).show();
         }
     }
@@ -1042,10 +1072,10 @@ public class MainActivity extends AppCompatActivity {
                 Uri.fromFile(new File(picturepath, String.valueOf(timeSeed) + ".jpg")));
         if (Build.VERSION.SDK_INT >= 23) {
             int checkCallPhonePermission = ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA);
-            if(checkCallPhonePermission != PackageManager.PERMISSION_GRANTED){
+            if (checkCallPhonePermission != PackageManager.PERMISSION_GRANTED) {
                 ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.CAMERA}, REQUEST_CAMERA);
                 return;
-            }else{
+            } else {
                 startActivityForResult(intent, REQUEST_TO_CAMERA);
             }
         } else {
@@ -1059,12 +1089,12 @@ public class MainActivity extends AppCompatActivity {
                 android.provider.MediaStore.Images.Media.EXTERNAL_CONTENT_URI);
         if (Build.VERSION.SDK_INT >= 23) {
             int checkCallPhonePermission = ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE);
-            if(checkCallPhonePermission != PackageManager.PERMISSION_GRANTED){
+            if (checkCallPhonePermission != PackageManager.PERMISSION_GRANTED) {
                 Log.d("權限問題", "是");
                 ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.READ_EXTERNAL_STORAGE}, REQUEST_EXTERNAL_STORAGE);
                 Log.d("權限問題", "是");
                 return;
-            }else{
+            } else {
                 Log.d("權限問題", "否");
                 startActivityForResult(intent, REQUEST_TO_GALLERY);
             }
@@ -1074,16 +1104,16 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    public  void toExcel(View view) {
-        if(!(displayName.getText().toString().equals("") || displayName.getText().toString().equals("None Name"))){
+    public void toExcel(View view) {
+        if (!(displayName.getText().toString().equals("") || displayName.getText().toString().equals("None Name"))) {
             ExcelExport ee = new ExcelExport(picturepath + "BCRInfoOutput.xls", displayName.getText().toString(), displayEmail.getText().toString(), displayPhone.getText().toString());
             Toast.makeText(getApplicationContext(), "Adding Information to excel files was successful!", Toast.LENGTH_LONG).show();
-        }else{
+        } else {
             Toast.makeText(getApplicationContext(), "No proper information to add to excel file!", Toast.LENGTH_LONG).show();
         }
     }
-    public void checkPermission(){
 
+    public void checkPermission() {
 
 
         if (Build.VERSION.SDK_INT >= 23) {
@@ -1102,8 +1132,8 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void createFile(View view) {                 //上傳檔案到GoogleDrive
-        if(mDriveServiceHelper != null){
-            Log.d(TAG,"Create a file.");
+        if (mDriveServiceHelper != null) {
+            Log.d(TAG, "Create a file.");
 
 
             mDriveServiceHelper.createFile()
@@ -1112,19 +1142,19 @@ public class MainActivity extends AppCompatActivity {
                             Log.e(TAG, "Couldn't create file.", exception));
             Toast.makeText(this, " Upload excel files was successful!", Toast.LENGTH_LONG).show();
 
-        }else{
+        } else {
             Toast.makeText(this, " Upload excel files was failed!", Toast.LENGTH_LONG).show();
         }
 
     }
+
     public void signOut(View view) {
-        if(mDriveServiceHelper == null){
+        if (mDriveServiceHelper == null) {
             requestSignIn();
-        }else{
+        } else {
             client.signOut();
             handleSignInResult(null);
         }
-
 
 
     }
