@@ -3,6 +3,7 @@ package com.example.androidocr;
 import android.Manifest;
 import android.app.Activity;
 import android.content.ClipData;
+import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.ActivityInfo;
@@ -13,6 +14,8 @@ import android.graphics.Bitmap;
 import android.graphics.Color;
 import android.graphics.BitmapFactory;
 import android.graphics.drawable.Drawable;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Environment;
@@ -179,6 +182,8 @@ public class MainActivity extends AppCompatActivity {
     private Toolbar toolbar;
     private Boolean hanyu_switchPref;
     private Boolean countrycode_switchPref;
+    private ConnectivityManager CM;
+    private NetworkInfo networkInfo;
 
 
     private static final int REQUEST_EXTERNAL_STORAGE = 1;
@@ -220,6 +225,8 @@ public class MainActivity extends AppCompatActivity {
         drawerLayout = (DrawerLayout) findViewById(R.id.drawerLayout);
         navigation_view = (NavigationView) findViewById(R.id.navigation_view);
         toolbar = (Toolbar) findViewById(R.id.toolbar);
+        CM = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
+        networkInfo = CM.getActiveNetworkInfo();
         accountName = navigation_view.getHeaderView(0).findViewById(R.id.email_name);
         LineMat = new Mat();
         dilaMat = new Mat();
@@ -373,6 +380,17 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void requestSignIn() {                          //向Google要求登入帳號後要使用的服務
+        CM = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
+        networkInfo = CM.getActiveNetworkInfo();
+        if (networkInfo != null) {
+            if (!networkInfo.isConnected()) {
+                Toast.makeText(getApplicationContext(), "Please connect to the Internet.", Toast.LENGTH_LONG).show();
+                return;
+            }
+        }else{
+            Toast.makeText(getApplicationContext(), "Please connect to the Internet.", Toast.LENGTH_LONG).show();
+            return;
+        }
         GoogleSignInOptions signInOptions =
                 new GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
                         .requestEmail()
@@ -413,13 +431,13 @@ public class MainActivity extends AppCompatActivity {
                 })
                 .addOnFailureListener(exception -> {
                     navigation_view.getMenu().findItem(R.id.action_logging).setTitle(R.string.Signin_banner);
-                    navigation_view.getMenu().findItem(R.id.action_logging).setTitle("登入Google Account");
+                    //    navigation_view.getMenu().findItem(R.id.action_logging).setTitle("登入Google Account");
                     accountName.setText("登入狀態:尚未登入");
                     //      signOutGD.setText(R.string.Signin_banner);
                     Toast.makeText(getApplicationContext(), "Signed out.", Toast.LENGTH_LONG).show();
 
                     mDriveServiceHelper = null;
-                    Log.e("123123132132132", "Unable to sign in.", exception);
+                    Log.e("handleSignInResult", "Unable to sign in.", exception);
                 });
 
 
@@ -1131,11 +1149,26 @@ public class MainActivity extends AppCompatActivity {
 
     }
 
-    public void createFile(View view) {                 //上傳檔案到GoogleDrive
+    public void createFileOnGD(View view) {                 //上傳檔案到GoogleDrive
+        CM = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
+        networkInfo = CM.getActiveNetworkInfo();
+        if (networkInfo != null) {
+            if (!networkInfo.isConnected()) {
+                Toast.makeText(getApplicationContext(), "Please connect to the Internet.", Toast.LENGTH_LONG).show();
+                return;
+            }
+        }else{
+            Toast.makeText(getApplicationContext(), "Please connect to the Internet.", Toast.LENGTH_LONG).show();
+            return;
+        }
         if (mDriveServiceHelper != null) {
             Log.d(TAG, "Create a file.");
 
-
+            File f = new File(picturepath + "BCRInfoOutput.xls");
+            if (!f.exists()) {
+                Toast.makeText(this, "Please make a Excel file first!", Toast.LENGTH_LONG).show();
+                return;
+            }
             mDriveServiceHelper.createFile()
                     .addOnSuccessListener(fileId -> System.out.println(fileId))
                     .addOnFailureListener(exception ->

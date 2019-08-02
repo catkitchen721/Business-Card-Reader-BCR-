@@ -171,7 +171,7 @@
                     android:layout_margin="4dp"
                     android:layout_weight="1"
                     android:gravity="center"
-                    android:onClick="createFile"
+                    android:onClick="createFileOnGD"
                     android:text="@string/upload_excel_toGD"
                     android:textColor="#ffffff" />
 
