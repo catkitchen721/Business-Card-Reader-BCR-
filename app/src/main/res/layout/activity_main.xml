@@ -1,186 +1,232 @@
 <?xml version="1.0" encoding="utf-8"?>
 <android.support.v4.widget.DrawerLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:fab="http://schemas.android.com/tools"
     android:id="@+id/drawerLayout"
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
-
-    <!-- 主頁面 -->
-    <LinearLayout
+    <android.support.design.widget.CoordinatorLayout
+        android:id="@+id/overview_coordinator_layout"
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:orientation="vertical">
+        android:layout_height="match_parent">
+        <!-- 主頁面 -->
+        <LinearLayout
+            android:id="@+id/linearLayout_1st"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="vertical">
 
-        <include layout="@layout/tool_bar" />
+            <include layout="@layout/tool_bar" />
 
-        <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
-            xmlns:tools="http://schemas.android.com/tools"
-            android:id="@+id/scrollView"
-            android:layout_width="wrap_content"
-            android:layout_height="match_parent">
+            <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+                xmlns:tools="http://schemas.android.com/tools"
+                android:id="@+id/scrollView"
+                android:layout_width="wrap_content"
+                android:layout_height="match_parent">
 
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:orientation="vertical"
-                android:paddingBottom="@dimen/activity_vertical_margin"
-                android:paddingLeft="@dimen/activity_horizontal_margin"
-                android:paddingRight="@dimen/activity_horizontal_margin"
-                android:paddingTop="@dimen/activity_vertical_margin"
-                tools:context="com.example.androidocr.MainActivity">
-
-
-                <ImageView
-                    android:id="@+id/imageView"
-                    android:layout_width="330dp"
-                    android:layout_height="200dp"
-                    android:src="#dddddd" />
 
                 <LinearLayout
+                    android:id="@+id/linearLayout_2nd"
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
-                    android:layout_margin="5dp"
-                    android:orientation="horizontal"
-                    android:padding="2dp">
+                    android:orientation="vertical"
+                    android:paddingBottom="@dimen/activity_vertical_margin"
+                    android:paddingLeft="@dimen/activity_horizontal_margin"
+                    android:paddingRight="@dimen/activity_horizontal_margin"
+                    android:paddingTop="@dimen/activity_vertical_margin"
+                    tools:context="com.example.androidocr.MainActivity">
 
-                    <Button
-                        android:id="@+id/take_photo"
+
+                    <ImageView
+                        android:id="@+id/imageView"
+                        android:layout_width="330dp"
+                        android:layout_height="200dp"
+                        android:src="#dddddd" />
+
+
+                    <!--
+                    <CheckBox
+                        android:id="@+id/isHanyu"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Name is Hanyu Pinyin"
+                        android:textStyle="bold" />
+
+                    <CheckBox
+                        android:id="@+id/isCallingCode"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Phone is Country Calling Codes prefix"
+                        android:textStyle="bold" />
+                    -->
+                    <ImageButton
+                        android:id="@+id/run_OCR"
                         android:layout_width="match_parent"
                         android:layout_height="40dp"
                         android:layout_gravity="center_horizontal"
                         android:layout_margin="4dp"
                         android:layout_weight="1"
-                        android:background="#164578"
                         android:gravity="center"
-                        android:onClick="openCamera"
-                        android:text="@string/take_photo"
-                        android:textColor="#ffffff" />
+                        app:srcCompat="@drawable/ic_run_ocr_icon" />
 
-                    <Button
-                        android:id="@+id/open_gallery"
+                    <TextView
+                        android:id="@+id/display_the_result"
                         android:layout_width="match_parent"
-                        android:layout_height="40dp"
-                        android:layout_gravity="center_horizontal"
-                        android:layout_margin="4dp"
-                        android:layout_weight="1"
-                        android:background="#164578"
+                        android:layout_height="wrap_content"
+                        android:background="#e4e3e3"
                         android:gravity="center"
-                        android:onClick="openGallery"
-                        android:text="@string/from_gallery"
-                        android:textColor="#ffffff" />
+                        android:text="Here is the OCR text!"
+                        tools:text="Here is the OCR text!" />
+
+                    <EditText
+                        android:id="@+id/result_name"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:background="#e4e3e3"
+                        android:ems="10"
+                        android:gravity="center"
+                        android:hint="Name"
+                        android:inputType="textPersonName" />
+
+                    <EditText
+                        android:id="@+id/result_phone"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:background="#e4e3e3"
+                        android:ems="10"
+                        android:gravity="center"
+                        android:hint="Phone"
+                        android:inputType="phone" />
+
+                    <EditText
+                        android:id="@+id/result_email"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:background="#e4e3e3"
+                        android:ems="10"
+                        android:gravity="center"
+                        android:hint="Email"
+                        android:inputType="textEmailAddress" />
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:layout_margin="5dp"
+                        android:orientation="horizontal"
+                        android:padding="2dp">
+
+
+                        <ImageButton
+                            android:id="@+id/take_photo"
+                            android:layout_width="match_parent"
+                            android:layout_height="40dp"
+                            android:layout_gravity="center_horizontal"
+                            android:layout_margin="4dp"
+                            android:layout_weight="1"
+                            android:gravity="center"
+                            android:onClick="openCamera"
+                            app:srcCompat="@drawable/ic_camera_icon" />
+
+                        <ImageButton
+                            android:id="@+id/open_gallery"
+                            android:layout_width="match_parent"
+                            android:layout_height="40dp"
+                            android:layout_gravity="center_horizontal"
+                            android:layout_margin="4dp"
+                            android:layout_weight="1"
+                            android:gravity="center"
+                            android:onClick="openGallery"
+                            app:srcCompat="@drawable/ic_album_icom" />
+
+
+                    </LinearLayout>
+                    <!--
+                                        <Button
+                                            android:id="@+id/save_toExcel"
+                                            android:layout_width="match_parent"
+                                            android:layout_height="40dp"
+                                            android:layout_gravity="center_horizontal"
+                                            android:layout_margin="4dp"
+                                            android:layout_weight="1"
+                                            android:gravity="center"
+                                            android:onClick="toExcel"
+                                            android:text="@string/save_toExcel"
+                                            android:textColor="#ffffff" />
+
+                                        <Button
+                                            android:id="@+id/add_toContact"
+                                            android:layout_width="match_parent"
+                                            android:layout_height="40dp"
+                                            android:layout_gravity="center_horizontal"
+                                            android:layout_margin="4dp"
+                                            android:layout_weight="1"
+                                            android:gravity="center"
+                                            android:onClick="addToContacts"
+                                            android:text="@string/add_toContact"
+
+                                            android:textColor="#ffffff"
+                                            tools:text="Add to Contacts!" />
+
+                                        <Button
+                                            android:id="@+id/upload_button"
+                                            android:layout_width="match_parent"
+                                            android:layout_height="40dp"
+                                            android:layout_gravity="center_horizontal"
+                                            android:layout_margin="4dp"
+                                            android:layout_weight="1"
+                                            android:gravity="center"
+                                            android:onClick="createFileOnGD"
+                                            android:text="@string/upload_excel_toGD"
+                                            android:textColor="#ffffff" />
+
+                    -->
+
 
                 </LinearLayout>
-                <!--
-                <CheckBox
-                    android:id="@+id/isHanyu"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="Name is Hanyu Pinyin"
-                    android:textStyle="bold" />
-
-                <CheckBox
-                    android:id="@+id/isCallingCode"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="Phone is Country Calling Codes prefix"
-                    android:textStyle="bold" />
-                -->
-                <Button
-                    android:id="@+id/run_OCR"
-                    android:layout_width="match_parent"
-                    android:layout_height="40dp"
-                    android:layout_gravity="center_horizontal"
-                    android:layout_margin="4dp"
-                    android:layout_weight="1"
-                    android:gravity="center"
-                    android:text="@string/run_OCR"
-                    android:textColor="#ffffff" />
-
-                <TextView
-                    android:id="@+id/display_the_result"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:background="#e4e3e3"
-                    android:gravity="center"
-                    android:text="Here is the OCR text!"
-                    tools:text="Here is the OCR text!" />
-
-                <EditText
-                    android:id="@+id/result_name"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:background="#e4e3e3"
-                    android:ems="10"
-                    android:gravity="center"
-                    android:hint="Name"
-                    android:inputType="textPersonName" />
-
-                <EditText
-                    android:id="@+id/result_phone"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:background="#e4e3e3"
-                    android:ems="10"
-                    android:gravity="center"
-                    android:hint="Phone"
-                    android:inputType="phone" />
-
-                <EditText
-                    android:id="@+id/result_email"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:background="#e4e3e3"
-                    android:ems="10"
-                    android:gravity="center"
-                    android:hint="Email"
-                    android:inputType="textEmailAddress" />
-
-                <Button
-                    android:id="@+id/save_toExcel"
-                    android:layout_width="match_parent"
-                    android:layout_height="40dp"
-                    android:layout_gravity="center_horizontal"
-                    android:layout_margin="4dp"
-                    android:layout_weight="1"
-                    android:gravity="center"
-                    android:onClick="toExcel"
-                    android:text="@string/save_toExcel"
-                    android:textColor="#ffffff" />
-
-                <Button
-                    android:id="@+id/add_toContact"
-                    android:layout_width="match_parent"
-                    android:layout_height="40dp"
-                    android:layout_gravity="center_horizontal"
-                    android:layout_margin="4dp"
-                    android:layout_weight="1"
-                    android:gravity="center"
-                    android:onClick="addToContacts"
-                    android:text="@string/add_toContact"
-
-                    android:textColor="#ffffff"
-                    tools:text="Add to Contacts!" />
-
-                <Button
-                    android:id="@+id/upload_button"
-                    android:layout_width="match_parent"
-                    android:layout_height="40dp"
-                    android:layout_gravity="center_horizontal"
-                    android:layout_margin="4dp"
-                    android:layout_weight="1"
-                    android:gravity="center"
-                    android:onClick="createFileOnGD"
-                    android:text="@string/upload_excel_toGD"
-                    android:textColor="#ffffff" />
 
 
+            </ScrollView>
+        </LinearLayout>
 
-            </LinearLayout>
+        <android.support.design.widget.FloatingActionButton
+            android:id="@+id/fab_3"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_margin="16dp"
+            android:src="@drawable/ic_cloud_upload"
+            fab:fab_addButtonColorPressed="@color/colorPrimaryDark"
+            app:layout_anchor="@id/linearLayout_1st"
+            app:layout_anchorGravity="bottom|right|end"/>
+        <android.support.design.widget.FloatingActionButton
+            android:id="@+id/fab_2"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_margin="16dp"
+            android:src="@drawable/ic_excel_icon"
+            fab:fab_addButtonColorPressed="@color/colorPrimaryDark"
+            app:layout_anchor="@id/linearLayout_1st"
+            app:layout_anchorGravity="bottom|right|end"/>
+        <android.support.design.widget.FloatingActionButton
+            android:id="@+id/fab_1"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_margin="16dp"
+            android:src="@drawable/ic_contact_icon"
+            fab:fab_addButtonColorPressed="@color/colorPrimaryDark"
+            app:layout_anchor="@id/linearLayout_1st"
+            app:layout_anchorGravity="bottom|right|end"/>
+        <android.support.design.widget.FloatingActionButton
+            android:id="@+id/fab"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_margin="16dp"
+            android:src="@drawable/ic_next_icon"
+            fab:fab_addButtonColorPressed="@color/colorPrimaryDark"
+            app:layout_anchor="@id/linearLayout_1st"
+            app:layout_anchorGravity="bottom|right|end"/>
 
-        </ScrollView>
-    </LinearLayout>
+    </android.support.design.widget.CoordinatorLayout>
+
     <!-- 側拉選單 -->
     <android.support.design.widget.NavigationView
         android:id="@+id/navigation_view"
@@ -189,6 +235,6 @@
         android:layout_gravity="start"
         app:headerLayout="@layout/navigation_header"
         app:menu="@menu/drawer"
-        app:theme="@style/TextAppearance"/>
+        app:theme="@style/TextAppearance" />
 
 </android.support.v4.widget.DrawerLayout>

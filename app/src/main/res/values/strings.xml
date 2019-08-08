@@ -11,6 +11,8 @@
     <string name="from_gallery">From Gallery</string>
     <string name="drawer_open">Drawer opened</string>
     <string name="drawer_close">Drawer closed</string>
+    <string name="about_text">指導教授：謝孫源\n專題成員：張育愷、吳帛融\n開發工具：Android Studio、Java、OpenCV、Tesseract\n測試環境：Windows 10、Android 8.0\n</string>
+    <string name="about_title">基於OCR—名片資訊即時蒐集APP</string>
 
     <!-- TODO: Remove or change this placeholder text -->
     <string name="hello_blank_fragment">Hello blank fragment</string>

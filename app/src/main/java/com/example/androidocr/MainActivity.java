@@ -25,6 +25,7 @@ import android.provider.ContactsContract;
 import android.provider.MediaStore;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
+import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.NavigationView;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
@@ -43,6 +44,7 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.EditText;
+import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.SeekBar;
 import android.widget.TextView;
@@ -162,17 +164,17 @@ public class MainActivity extends AppCompatActivity {
     boolean recognitionSuccess = false;
 
     private ImageView displayImage;
-    private Button runOCR;
+    private ImageButton runOCR;
     private TextView displayText;
     private TextView accountName;
     private EditText displayEmail;
     private EditText displayPhone;
     private EditText displayName;
-    private Button openContacts;
-    private Button takePhoto;
-    private Button fromGallery;
-    private Button toExcel;
-    private Button uploadGD;
+ //   private Button openContacts;
+    private ImageButton takePhoto;
+    private ImageButton fromGallery;
+ //   private Button toExcel;
+ //   private Button uploadGD;
     //    private Button signOutGD;
     //  private CheckBox isHanyu;
     // private CheckBox isCallingCode;
@@ -184,7 +186,11 @@ public class MainActivity extends AppCompatActivity {
     private Boolean countrycode_switchPref;
     private ConnectivityManager CM;
     private NetworkInfo networkInfo;
-
+    private FloatingActionButton fab;
+    private FloatingActionButton fab1;
+    private FloatingActionButton fab2;
+    private FloatingActionButton fab3;
+    private Boolean isFABOpen = false;
 
     private static final int REQUEST_EXTERNAL_STORAGE = 1;
     private static String[] PERMISSIONS_STORAGE = {
@@ -207,12 +213,12 @@ public class MainActivity extends AppCompatActivity {
         StrictMode.setVmPolicy(builder.build());
         builder.detectFileUriExposure();
 
-        runOCR = (Button) findViewById(R.id.run_OCR);
-        openContacts = (Button) findViewById(R.id.add_toContact);
-        takePhoto = (Button) findViewById(R.id.take_photo);
-        fromGallery = (Button) findViewById(R.id.open_gallery);
-        toExcel = (Button) findViewById(R.id.save_toExcel);
-        uploadGD = (Button) findViewById(R.id.upload_button);
+        runOCR = (ImageButton) findViewById(R.id.run_OCR);
+     //   openContacts = (Button) findViewById(R.id.add_toContact);
+        takePhoto = (ImageButton) findViewById(R.id.take_photo);
+        fromGallery = (ImageButton) findViewById(R.id.open_gallery);
+      //  toExcel = (Button) findViewById(R.id.save_toExcel);
+       // uploadGD = (Button) findViewById(R.id.upload_button);
         //   signOutGD = (Button) findViewById(R.id.signout_button);
 
         displayText = (TextView) findViewById(R.id.display_the_result);
@@ -228,6 +234,10 @@ public class MainActivity extends AppCompatActivity {
         CM = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
         networkInfo = CM.getActiveNetworkInfo();
         accountName = navigation_view.getHeaderView(0).findViewById(R.id.email_name);
+        fab = (FloatingActionButton) findViewById(R.id.fab);
+        fab1 = (FloatingActionButton) findViewById(R.id.fab_1);
+        fab2 = (FloatingActionButton) findViewById(R.id.fab_2);
+        fab3 = (FloatingActionButton) findViewById(R.id.fab_3);
         LineMat = new Mat();
         dilaMat = new Mat();
         gMat = new Mat();
@@ -268,13 +278,13 @@ public class MainActivity extends AppCompatActivity {
         mTess.init(datapath, language);
 
         if (Build.VERSION.SDK_INT >= 21) {
-            uploadGD.setBackgroundResource(R.drawable.ripple_sample);
+        //    uploadGD.setBackgroundResource(R.drawable.ripple_sample);
             //      signOutGD.setBackgroundResource(R.drawable.ripple_sample);
-            openContacts.setBackgroundResource(R.drawable.ripple_sample);
-            toExcel.setBackgroundResource(R.drawable.ripple_sample);
-            runOCR.setBackgroundResource(R.drawable.ripple_sample);
-            takePhoto.setBackgroundResource(R.drawable.ripple_sample);
-            fromGallery.setBackgroundResource(R.drawable.ripple_sample);
+         //   openContacts.setBackgroundResource(R.drawable.ripple_sample);
+          //  toExcel.setBackgroundResource(R.drawable.ripple_sample);
+            runOCR.setBackgroundResource(R.drawable.ripple_sample_circle_2);
+            takePhoto.setBackgroundResource(R.drawable.rippe_sample_circle);
+            fromGallery.setBackgroundResource(R.drawable.rippe_sample_circle);
         }
 
         //run the OCR on the test_image...
@@ -310,6 +320,41 @@ public class MainActivity extends AppCompatActivity {
         });
 
 
+        fab.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                if(!isFABOpen){
+                    showFABMenu();
+                }else{
+                    closeFABMenu();
+                }
+            }
+        });
+        fab1.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                addToContacts();
+             //   Toast.makeText(MainActivity.this, "fab1", Toast.LENGTH_SHORT).show();
+            }
+        });
+        fab2.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                toExcel();
+             //   Toast.makeText(MainActivity.this, "fab2", Toast.LENGTH_SHORT).show();
+            }
+        });
+        fab3.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                createFileOnGD();
+            //    Toast.makeText(MainActivity.this, "fab3", Toast.LENGTH_SHORT).show();
+            }
+        });
+
+        fab1.setClickable(false);
+        fab2.setClickable(false);
+        fab3.setClickable(false);
         // 用toolbar做為APP的ActionBar
         setSupportActionBar(toolbar);
 
@@ -353,7 +398,10 @@ public class MainActivity extends AppCompatActivity {
                     return true;
                 } else if (id == R.id.action_about) {
                     // 按下「關於」要做的事
-                    Toast.makeText(MainActivity.this, "關於你的歌", Toast.LENGTH_SHORT).show();
+                    Intent intent = new Intent();
+                    intent.setClass(MainActivity.this, AboutActivity.class);
+                    startActivity(intent);
+                   // Toast.makeText(MainActivity.this, "關於你的歌", Toast.LENGTH_SHORT).show();
                     return true;
                 }
                 // 略..
@@ -915,7 +963,7 @@ public class MainActivity extends AppCompatActivity {
         extractPhone(OCRresult);
         System.out.println(OCRresult);
 */
-        displayText.setText("");
+        //displayText.setText("");
         String OCRresult = "";
         String AllResult = "";
 
@@ -1053,34 +1101,7 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    public void addToContacts(View view) {
 
-        // Creates a new Intent to insert a contact
-        Intent intent = new Intent(ContactsContract.Intents.Insert.ACTION);
-        // Sets the MIME type to match the Contacts Provider
-        intent.setType(ContactsContract.RawContacts.CONTENT_TYPE);
-
-        //Checks if we have the name, email and phone number...
-        if (!(displayName.getText().toString().equals("") || displayName.getText().toString().equals("None Name"))) {
-            //Adds the name...
-            intent.putExtra(ContactsContract.Intents.Insert.NAME, displayName.getText().toString());
-
-            //Adds the email...
-            intent.putExtra(ContactsContract.Intents.Insert.EMAIL, displayEmail.getText().toString());
-            //Adds the email as Work Email
-            intent.putExtra(ContactsContract.Intents.Insert.EMAIL_TYPE, ContactsContract.CommonDataKinds.Email.TYPE_WORK);
-
-            //Adds the phone number...
-            intent.putExtra(ContactsContract.Intents.Insert.PHONE, displayPhone.getText().toString());
-            //Adds the phone number as Work Phone
-            intent.putExtra(ContactsContract.Intents.Insert.PHONE_TYPE, ContactsContract.CommonDataKinds.Phone.TYPE_WORK);
-
-            //starting the activity...
-            startActivity(intent);
-        } else {
-            Toast.makeText(getApplicationContext(), "No information to add to contacts!", Toast.LENGTH_LONG).show();
-        }
-    }
 
     public void openCamera(View view) {
         Intent intent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
@@ -1122,14 +1143,7 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    public void toExcel(View view) {
-        if (!(displayName.getText().toString().equals("") || displayName.getText().toString().equals("None Name"))) {
-            ExcelExport ee = new ExcelExport(picturepath + "BCRInfoOutput.xls", displayName.getText().toString(), displayEmail.getText().toString(), displayPhone.getText().toString());
-            Toast.makeText(getApplicationContext(), "Adding Information to excel files was successful!", Toast.LENGTH_LONG).show();
-        } else {
-            Toast.makeText(getApplicationContext(), "No proper information to add to excel file!", Toast.LENGTH_LONG).show();
-        }
-    }
+
 
     public void checkPermission() {
 
@@ -1149,7 +1163,45 @@ public class MainActivity extends AppCompatActivity {
 
     }
 
-    public void createFileOnGD(View view) {                 //上傳檔案到GoogleDrive
+    public void addToContacts() {
+
+        // Creates a new Intent to insert a contact
+        Intent intent = new Intent(ContactsContract.Intents.Insert.ACTION);
+        // Sets the MIME type to match the Contacts Provider
+        intent.setType(ContactsContract.RawContacts.CONTENT_TYPE);
+
+        //Checks if we have the name, email and phone number...
+        if (!(displayName.getText().toString().equals("") || displayName.getText().toString().equals("None Name"))) {
+            //Adds the name...
+            intent.putExtra(ContactsContract.Intents.Insert.NAME, displayName.getText().toString());
+
+            //Adds the email...
+            intent.putExtra(ContactsContract.Intents.Insert.EMAIL, displayEmail.getText().toString());
+            //Adds the email as Work Email
+            intent.putExtra(ContactsContract.Intents.Insert.EMAIL_TYPE, ContactsContract.CommonDataKinds.Email.TYPE_WORK);
+
+            //Adds the phone number...
+            intent.putExtra(ContactsContract.Intents.Insert.PHONE, displayPhone.getText().toString());
+            //Adds the phone number as Work Phone
+            intent.putExtra(ContactsContract.Intents.Insert.PHONE_TYPE, ContactsContract.CommonDataKinds.Phone.TYPE_WORK);
+
+            //starting the activity...
+            startActivity(intent);
+        } else {
+            Toast.makeText(getApplicationContext(), "No information to add to contacts!", Toast.LENGTH_LONG).show();
+        }
+    }
+
+    public void toExcel() {
+        if (!(displayName.getText().toString().equals("") || displayName.getText().toString().equals("None Name"))) {
+            ExcelExport ee = new ExcelExport(picturepath + "BCRInfoOutput.xls", displayName.getText().toString(), displayEmail.getText().toString(), displayPhone.getText().toString());
+            Toast.makeText(getApplicationContext(), "Adding Information to excel files was successful!", Toast.LENGTH_LONG).show();
+        } else {
+            Toast.makeText(getApplicationContext(), "No proper information to add to excel file!", Toast.LENGTH_LONG).show();
+        }
+    }
+
+    public void createFileOnGD() {                 //上傳檔案到GoogleDrive
         CM = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
         networkInfo = CM.getActiveNetworkInfo();
         if (networkInfo != null) {
@@ -1181,14 +1233,25 @@ public class MainActivity extends AppCompatActivity {
 
     }
 
-    public void signOut(View view) {
-        if (mDriveServiceHelper == null) {
-            requestSignIn();
-        } else {
-            client.signOut();
-            handleSignInResult(null);
-        }
+    private void showFABMenu(){
+        isFABOpen=true;
+        fab1.animate().translationY(-getResources().getDimension(R.dimen.standard_65));
+        fab2.animate().translationY(-getResources().getDimension(R.dimen.standard_130));
+        fab3.animate().translationY(-getResources().getDimension(R.dimen.standard_195));
+        fab.setImageResource(R.drawable.ic_close_icon);
+        fab1.setClickable(true);
+        fab2.setClickable(true);
+        fab3.setClickable(true);
+    }
 
-
+    private void closeFABMenu(){
+        isFABOpen=false;
+        fab1.animate().translationY(0);
+        fab2.animate().translationY(0);
+        fab3.animate().translationY(0);
+        fab.setImageResource(R.drawable.ic_next_icon);
+        fab1.setClickable(false);
+        fab2.setClickable(false);
+        fab3.setClickable(false);
     }
 }
