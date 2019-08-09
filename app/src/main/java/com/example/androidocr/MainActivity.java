@@ -394,7 +394,10 @@ public class MainActivity extends AppCompatActivity {
                     return true;
                 } else if (id == R.id.action_help) {
                     // 按下「使用說明」要做的事
-                    Toast.makeText(MainActivity.this, "使用說明", Toast.LENGTH_SHORT).show();
+                    Intent intent = new Intent();
+                    intent.setClass(MainActivity.this, HelpActivity.class);
+                    startActivity(intent);
+                   // Toast.makeText(MainActivity.this, "使用說明", Toast.LENGTH_SHORT).show();
                     return true;
                 } else if (id == R.id.action_about) {
                     // 按下「關於」要做的事

@@ -12,8 +12,14 @@
     <string name="drawer_open">Drawer opened</string>
     <string name="drawer_close">Drawer closed</string>
     <string name="about_text">指導教授：謝孫源\n專題成員：張育愷、吳帛融\n開發工具：Android Studio、Java、OpenCV、Tesseract\n測試環境：Windows 10、Android 8.0\n</string>
-    <string name="about_title">基於OCR—名片資訊即時蒐集APP</string>
-
+    <string name="about_title"><b style="color:red;">基於OCR—名片資訊即時蒐集APP</b></string>
+    <string name="help_main">主畫面中可以看到\n1. 選單欄\n2. 執行OCR以辨識文字\n3. 從相機取得圖片\n4. 從相簿取得圖片\n5. 選擇您要儲存方式\n</string>
+    <string name="help_step_1">Step 1.\n可在下圖紅框處登入您的Google Account\n以利於日後將Excel文件儲存至您的雲端硬碟中備份\n</string>
+    <string name="help_step_2">Step 2.\n點選設定後，可開啟以漢語拼音或國際電話做辨識\n</string>
+    <string name="help_step_3">Step 3.\n於紅框處擇一方式取得您要的照片\n</string>
+    <string name="help_step_4">Step 4.\n按下辨識按鈕，開始辨識\n</string>
+    <string name="help_step_5">Step 5.\n可於此處修改辨識結果\n</string>
+    <string name="help_step_6">Step 6.\n最後點選紅框處按鈕，選擇您要的儲存方式\n1. 存入手機聯絡人\n2. 存入Excel文件\n3. 上傳已儲存的Excel文件至雲端硬碟\n</string>
     <!-- TODO: Remove or change this placeholder text -->
     <string name="hello_blank_fragment">Hello blank fragment</string>
 </resources>
