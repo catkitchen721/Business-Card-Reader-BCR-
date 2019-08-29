@@ -14,6 +14,7 @@ import org.opencv.core.MatOfPoint2f;
 import org.opencv.core.Point;
 import org.opencv.core.RotatedRect;
 import org.opencv.core.Scalar;
+import org.opencv.core.Size;
 import org.opencv.imgproc.Imgproc;
 
 import java.util.Collection;
@@ -41,8 +42,7 @@ public class ImagePers {
     private Mat lineMat = null;
     private Mat polyMat = null;
 
-    public ImagePers(Mat org)
-    {
+    public ImagePers(Mat org) {
         this.org = org;
         this.grayMat = org.clone();
         this.blurMat = org.clone();
@@ -52,107 +52,66 @@ public class ImagePers {
         this.lineMat = org.clone();
     }
 
-    public Mat returnImg()
-    {
+    public Mat returnImg() {
         Imgproc.cvtColor(this.org, this.grayMat, Imgproc.COLOR_RGB2GRAY);  //灰度化
-        Imgproc.medianBlur(this.grayMat, this.blurMat, 7);  //去除雜訊
+        // Imgproc.medianBlur(this.grayMat, this.blurMat, 7);  //去除雜訊
+        Imgproc.GaussianBlur(this.grayMat, this.blurMat, new Size(11, 11), 0, 0);
         Imgproc.adaptiveThreshold(this.blurMat, this.binMat, 255, Imgproc.ADAPTIVE_THRESH_MEAN_C, Imgproc.THRESH_BINARY, 201, 0);  //區域特化型二值化
-        Imgproc.Canny(this.binMat, this.cannyMat, cannyThr, cannyThr * cannyFactor);  //邊緣檢測
+        Imgproc.Canny(this.binMat, this.cannyMat, 40, 50);  //邊緣檢測
+
+
+        //膨脹
+        final Size kernelSize1 = new Size(10, 10);
+        Mat element1 = Imgproc.getStructuringElement(Imgproc.MORPH_RECT, kernelSize1);
+        Imgproc.dilate(this.cannyMat, this.cannyMat, element1);
 
         // 找輪廓
         Vector<MatOfPoint> contours = new Vector<>();
-        Vector<MatOfPoint> selectedContours = new Vector<>();
         MatOfPoint2f contours2f = new MatOfPoint2f();
-        MatOfPoint2f contours2fMax = new MatOfPoint2f();
         Mat hry = new Mat();
         Imgproc.findContours(this.cannyMat, contours, hry, Imgproc.RETR_CCOMP, Imgproc.CHAIN_APPROX_SIMPLE);
 
         // 畫輪廓
         this.lineMat = Mat.zeros(this.cannyMat.rows(), this.cannyMat.cols(), CvType.CV_8UC3);
-        this.polyMat = Mat.zeros(org.size(), CvType.CV_8UC3);
 
-        for(int i=0; i<contours.size(); i++)
-        {
-            if((contours.elementAt(i).total() >= 200))
-            {
-                System.out.println("total: " + String.valueOf(contours.elementAt(i).total()));
-                Imgproc.drawContours(this.polyMat, contours, i, new Scalar((new Random()).nextInt(256), (new Random()).nextInt(256), (new Random()).nextInt(256)), 1, 8, hry, 2147483647, new Point());
-                selectedContours.add(contours.elementAt(i));
-            }
+        for (int i = 0; i < contours.size(); i++) {
+            Imgproc.drawContours(this.lineMat, contours, i, new Scalar((new Random()).nextInt(256), (new Random()).nextInt(256), (new Random()).nextInt(256)), 1, 8, hry, 2147483647, new Point());
         }
-        Log.d("select contour size: ", String.valueOf(selectedContours.size()));
-        contours.clear();
-        contours = new Vector<>(selectedContours);
-        Log.d("contour size: ", String.valueOf(contours.size()));
-        for(int i=0;i<contours.size();i++)
-        {
-            Log.d("contour size: ", String.valueOf(contours.size()));
-        }
+
 
         Vector<MatOfPoint2f> polyContours2f = new Vector<>(contours.size());
         Vector<MatOfPoint> polyContours = new Vector<>(contours.size());
         MatOfPoint2f temp_polyContours2f = new MatOfPoint2f();
         MatOfPoint temp_polyContours = new MatOfPoint();
-
         Log.d("polysize", String.valueOf(polyContours.size()));
-
         int maxArea = 0;
-
-        /*for(int i=0; i<contours.size(); i++)
-        {
+        for (int i = 0; i < contours.size(); i++) {
             if (Imgproc.contourArea(contours.get(i)) > Imgproc.contourArea(contours.get(maxArea))) {
                 maxArea = i;
             }
             Log.d("area: ", String.valueOf(Imgproc.contourArea(contours.get(maxArea))));
-        }*/
-
-        for(int i=0; i<contours.size(); i++)
-        {
-            contours.get(i).convertTo(contours2f, CvType.CV_32FC2);
-            contours.get(maxArea).convertTo(contours2fMax, CvType.CV_32FC2);
-            if (Imgproc.arcLength(contours2f, false) > Imgproc.arcLength(contours2fMax, false)) {
-                maxArea = i;
-            }
-            Log.d("area: ", String.valueOf(Imgproc.contourArea(contours.get(maxArea))));
         }
-
-        for(int i=0; i<contours.size(); i++)
-        {
+        for (int i = 0; i < contours.size(); i++) {
             contours.get(i).convertTo(contours2f, CvType.CV_32FC2);
-            //Log.d("polyinfo", String.valueOf(contours.get(i).dump()));
             double arclen = Imgproc.arcLength(contours2f, true);
-            Imgproc.approxPolyDP(contours2f, temp_polyContours2f, 5, true);
-            //Log.d("polyinfo", String.valueOf(temp_polyContours2f.dump()));
+            Imgproc.approxPolyDP(contours2f, temp_polyContours2f, 0.1 * arclen, true);
             polyContours2f.add(temp_polyContours2f);
             temp_polyContours2f = new MatOfPoint2f();
         }
-
-
-        for(int i=0; i<contours.size(); i++)
-        {
+        Mat polyMat = Mat.zeros(org.size(), CvType.CV_8UC3);
+        for (int i = 0; i < contours.size(); i++) {
             polyContours2f.get(i).convertTo(temp_polyContours, CvType.CV_32S);
             polyContours.add(temp_polyContours);
             temp_polyContours = new MatOfPoint();
-            //Log.d("polyinfo", String.valueOf(polyContours.get(i).dump()));
         }
-        for(int i=0; i<polyContours.size(); i++)
-            Imgproc.drawContours(polyMat, polyContours, i, new Scalar((new Random()).nextInt(256), (new Random()).nextInt(256), (new Random()).nextInt(256)), 2);
-
+        Imgproc.drawContours(polyMat, polyContours, maxArea, new Scalar((new Random()).nextInt(256), (new Random()).nextInt(256), (new Random()).nextInt(256)), 2);
         MatOfInt hull = new MatOfInt();
-        Point myrect_point[] = new Point[4];
-        RotatedRect myrect;
-        myrect = Imgproc.minAreaRect(polyContours2f.elementAt(maxArea));
-        myrect.points(myrect_point);
-        //Imgproc.convexHull(polyContours.elementAt(maxArea), hull, false);
+        Imgproc.convexHull(polyContours.elementAt(maxArea), hull, false);
 
-        for (int i = 0; i < myrect_point.length; ++i) {
-            Imgproc.circle(polyMat, myrect_point[i], 10, new Scalar((new Random()).nextInt(256), (new Random()).nextInt(256), (new Random()).nextInt(256)), 3);
+        for (int i = 0; i < hull.toArray().length; ++i) {
+            Imgproc.circle(polyMat, polyContours.elementAt(maxArea).toArray()[i], 10, new Scalar((new Random()).nextInt(256), (new Random()).nextInt(256), (new Random()).nextInt(256)), 3);
         }
 
-        /*for (int i = 0; i < hull.toArray().length; ++i){
-            Imgproc.circle(polyMat, polyContours.elementAt(maxArea).toArray()[i], 10, new Scalar((new Random()).nextInt(256), (new Random()).nextInt(256), (new Random()).nextInt(256)), 3);
-        }*/
-        //Core.addWeighted(polyMat, 0.5, org, 0.5, 0, polyMat);
 
         Point srcPoints[] = new Point[4];
         Point dstPoints[] = new Point[4];
@@ -162,22 +121,12 @@ public class ImagePers {
         dstPoints[2] = new Point(polyMat.cols(), polyMat.rows());
         dstPoints[3] = new Point(0, polyMat.rows());
 
-        /*for(int i=0;i<4;i++)
+        for(int i=0;i<4;i++)
         {
             polyContours2f.elementAt(maxArea).toArray()[i] = new Point(polyContours2f.elementAt(maxArea).toArray()[i].x * 4, polyContours2f.elementAt(maxArea).toArray()[i].y * 4);
-        }*/
-
-        if(polyContours2f.elementAt(maxArea).toArray().length < 4)
-        {
-
-            return  polyMat;
         }
 
-        /*System.out.println(polyContours2f.elementAt(maxArea).toArray()[0]);
-        System.out.println(polyContours2f.elementAt(maxArea).toArray()[1]);
-        System.out.println(polyContours2f.elementAt(maxArea).toArray()[2]);
-        System.out.println(polyContours2f.elementAt(maxArea).toArray()[3]);
-        System.out.println("---------------------------------------");
+
 
         double point_list[] = new double[4];
         point_list[0] = polyContours2f.elementAt(maxArea).toArray()[0].x;
@@ -189,93 +138,58 @@ public class ImagePers {
         point_list2[0] = polyContours2f.elementAt(maxArea).toArray()[0].y;
         point_list2[1] = polyContours2f.elementAt(maxArea).toArray()[1].y;
         point_list2[2] = polyContours2f.elementAt(maxArea).toArray()[2].y;
-        point_list2[3] = polyContours2f.elementAt(maxArea).toArray()[3].y;*/
-
-        System.out.println(myrect_point[0]);
-        System.out.println(myrect_point[1]);
-        System.out.println(myrect_point[2]);
-        System.out.println(myrect_point[3]);
-        System.out.println("---------------------------------------");
-
-        double point_list[] = new double[4];
-        point_list[0] = myrect_point[0].x;
-        point_list[1] = myrect_point[1].x;
-        point_list[2] = myrect_point[2].x;
-        point_list[3] = myrect_point[3].x;
-
-        double point_list2[] = new double[4];
-        point_list2[0] = myrect_point[0].y;
-        point_list2[1] = myrect_point[1].y;
-        point_list2[2] = myrect_point[2].y;
-        point_list2[3] = myrect_point[3].y;
+        point_list2[3] = polyContours2f.elementAt(maxArea).toArray()[3].y;
 
         double temp = 0.0;
         boolean sorted = false;
         int n = 4;
-        while (!sorted)
-        {
-            for(int i=1; i<n; i++)
-            {
+        while (!sorted) {
+            for (int i = 1; i < n; i++) {
                 sorted = true;
 
-                if(point_list[i-1] > point_list[i])
-                {
+                if (point_list[i - 1] > point_list[i]) {
                     //swap
                     System.out.println(point_list[i]);
-                    System.out.println(point_list[i-1]);
-                    temp = point_list[i-1];
-                    point_list[i-1] = point_list[i];
+                    System.out.println(point_list[i - 1]);
+                    temp = point_list[i - 1];
+                    point_list[i - 1] = point_list[i];
                     point_list[i] = temp;
-                    temp = point_list2[i-1];
-                    point_list2[i-1] = point_list2[i];
+                    temp = point_list2[i - 1];
+                    point_list2[i - 1] = point_list2[i];
                     point_list2[i] = temp;
                     System.out.println(point_list[i]);
-                    System.out.println(point_list[i-1]);
+                    System.out.println(point_list[i - 1]);
                     sorted = false;
                 }
             }
             n--;
         }
 
-        /*polyContours2f.elementAt(maxArea).toArray()[0].x = point_list[0];
+        polyContours2f.elementAt(maxArea).toArray()[0].x = point_list[0];
         polyContours2f.elementAt(maxArea).toArray()[1].x = point_list[1];
         polyContours2f.elementAt(maxArea).toArray()[2].x = point_list[2];
         polyContours2f.elementAt(maxArea).toArray()[3].x = point_list[3];
-
         polyContours2f.elementAt(maxArea).toArray()[0].y = point_list2[0];
         polyContours2f.elementAt(maxArea).toArray()[1].y = point_list2[1];
         polyContours2f.elementAt(maxArea).toArray()[2].y = point_list2[2];
-        polyContours2f.elementAt(maxArea).toArray()[3].y = point_list2[3];*/
+        polyContours2f.elementAt(maxArea).toArray()[3].y = point_list2[3];
 
-        System.out.println(point_list[0]);
-        System.out.println(point_list[1]);
-        System.out.println(point_list[2]);
-        System.out.println(point_list[3]);
 
-        if(point_list2[0] < point_list2[1])
-        {
+
+        if (point_list2[0] < point_list2[1]) {
             srcPoints[0] = new Point(point_list[0], point_list2[0]);
             srcPoints[3] = new Point(point_list[1], point_list2[1]);
-            System.out.println("000000000000");
-        }
-        else
-        {
+        } else {
             srcPoints[0] = new Point(point_list[1], point_list2[1]);
             srcPoints[3] = new Point(point_list[0], point_list2[0]);
-            System.out.println("111111111111111111");
         }
 
-        if(point_list2[2] < point_list2[3])
-        {
+        if (point_list2[2] < point_list2[3]) {
             srcPoints[1] = new Point(point_list[2], point_list2[2]);
             srcPoints[2] = new Point(point_list[3], point_list2[3]);
-            System.out.println("22222222222222");
-        }
-        else
-        {
+        } else {
             srcPoints[1] = new Point(point_list[3], point_list2[3]);
             srcPoints[2] = new Point(point_list[2], point_list2[2]);
-            System.out.println("3333333333333333");
         }
 
         MatOfPoint2f src = new MatOfPoint2f(srcPoints[0], srcPoints[1], srcPoints[2], srcPoints[3]);

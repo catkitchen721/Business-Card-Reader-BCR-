@@ -205,7 +205,7 @@ public class MainActivity extends AppCompatActivity {
     private static final int REQUEST_TO_GALLERY = 16;
 
     @Override
-    protected void onCreate(Bundle savedInstanceState) {
+    protected void onCreate(Bundle savedInstanceState) {        //全部的變數,ActionBar設定,Button的按壓特效,Button的Listener設置,都在這裡預先設好
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
@@ -214,20 +214,13 @@ public class MainActivity extends AppCompatActivity {
         builder.detectFileUriExposure();
 
         runOCR = (ImageButton) findViewById(R.id.run_OCR);
-     //   openContacts = (Button) findViewById(R.id.add_toContact);
         takePhoto = (ImageButton) findViewById(R.id.take_photo);
         fromGallery = (ImageButton) findViewById(R.id.open_gallery);
-      //  toExcel = (Button) findViewById(R.id.save_toExcel);
-       // uploadGD = (Button) findViewById(R.id.upload_button);
-        //   signOutGD = (Button) findViewById(R.id.signout_button);
-
         displayText = (TextView) findViewById(R.id.display_the_result);
         displayName = (EditText) findViewById(R.id.result_name);
         displayPhone = (EditText) findViewById(R.id.result_phone);
         displayEmail = (EditText) findViewById(R.id.result_email);
         displayImage = (ImageView) findViewById(R.id.imageView);
-        //  isHanyu = (CheckBox) findViewById(R.id.isHanyu);
-        //  isCallingCode = (CheckBox) findViewById(R.id.isCallingCode);
         drawerLayout = (DrawerLayout) findViewById(R.id.drawerLayout);
         navigation_view = (NavigationView) findViewById(R.id.navigation_view);
         toolbar = (Toolbar) findViewById(R.id.toolbar);
@@ -256,10 +249,6 @@ public class MainActivity extends AppCompatActivity {
         displayEmail.setEnabled(false);
         displayEmail.setFocusableInTouchMode(false);
 
-        //initialize hanyu check
-        // isHanyu.setChecked(true);
-        // isCallingCode.setChecked(true);
-
         //init image
         image = BitmapFactory.decodeResource(getResources(), R.drawable.test_image3);
 
@@ -272,22 +261,17 @@ public class MainActivity extends AppCompatActivity {
         trainLan = "tessdata/" + language + ".traineddata";
         datapath = getFilesDir() + "/tesseract/";
         mTess = new TessBaseAPI();
-
         checkFile(new File(datapath + "tessdata/"));
-
         mTess.init(datapath, language);
 
+        //設置Button的按壓特效
         if (Build.VERSION.SDK_INT >= 21) {
-        //    uploadGD.setBackgroundResource(R.drawable.ripple_sample);
-            //      signOutGD.setBackgroundResource(R.drawable.ripple_sample);
-         //   openContacts.setBackgroundResource(R.drawable.ripple_sample);
-          //  toExcel.setBackgroundResource(R.drawable.ripple_sample);
             runOCR.setBackgroundResource(R.drawable.ripple_sample_circle_2);
             takePhoto.setBackgroundResource(R.drawable.rippe_sample_circle);
             fromGallery.setBackgroundResource(R.drawable.rippe_sample_circle);
         }
 
-        //run the OCR on the test_image...
+        //設置runOCR的監聽事件
         runOCR.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -319,7 +303,7 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-
+        //設置Floating Action Button的監聽事件
         fab.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
@@ -412,6 +396,7 @@ public class MainActivity extends AppCompatActivity {
                 return false;
             }
         });
+
         // 還原設定中的Values
         android.support.v7.preference.PreferenceManager
                 .setDefaultValues(this, R.xml.preferences, false);
@@ -447,7 +432,7 @@ public class MainActivity extends AppCompatActivity {
                         .requestEmail()
                         .requestScopes(new Scope(DriveScopes.DRIVE_FILE),           //要求的服務類型
                                 new Scope(DriveScopes.DRIVE_APPDATA))
-                        .requestIdToken("561862270460-omke2t4cqrbcd5tq8jf1etogpug73jb3.apps.googleusercontent.com")
+                        .requestIdToken("561862270460-omke2t4cqrbcd5tq8jf1etogpug73jb3.apps.googleusercontent.com") //GoogleAPI控制台的Token,須自行產生
                         .build();
         //GoogleSignInClient client = GoogleSignIn.getClient(getActivity(), signInOptions);
         client = GoogleSignIn.getClient(this, signInOptions);
@@ -511,27 +496,18 @@ public class MainActivity extends AppCompatActivity {
         if (requestCode == REQUEST_TO_CAMERA) {
             try {
                 Uri uri = Uri.fromFile(new File(picturepath, String.valueOf(timeSeed) + ".jpg"));
-                Log.d("名字", String.valueOf(timeSeed));
+                Log.d("圖片名稱", String.valueOf(timeSeed));
 
                 OpenCVLoader.initDebug();
                 Mat rgbMat = new Mat();
-                //Mat grayMat = new Mat();
-                //Mat thsMat = new Mat();
                 Mat x05Mat = new Mat();
                 Mat x025Mat = new Mat();
-                //Mat brightMat = new Mat();
+
                 Bitmap srcBitmap = BitmapFactory.decodeFile(new File(picturepath, String.valueOf(timeSeed) + ".jpg").toString());
-                Bitmap dstBitmap = Bitmap.createBitmap(srcBitmap.getWidth(), srcBitmap.getHeight(), Bitmap.Config.RGB_565);
                 Bitmap x025Bitmap = Bitmap.createBitmap(srcBitmap.getWidth() / 4, srcBitmap.getHeight() / 4, Bitmap.Config.ARGB_8888);
-                Utils.bitmapToMat(srcBitmap, rgbMat);//convert original bitmap to Mat, R G B.
+                Utils.bitmapToMat(srcBitmap, rgbMat);   //convert original bitmap to Mat, R G B.
 
-            /* Tempararyly remove bright function.
-            rgbMat.convertTo(brightMat, -1, 1, 0);
-            */
 
-            /* Tempararyly remove threshold function.
-            Imgproc.threshold(grayMat, thsMat, threshold_value, 255, Imgproc.THRESH_TOZERO);
-            */
                 Imgproc.pyrDown(rgbMat, x05Mat, new Size(rgbMat.cols() * 0.5, rgbMat.rows() * 0.5));
                 Imgproc.pyrDown(x05Mat, x025Mat, new Size(x05Mat.cols() * 0.5, x05Mat.rows() * 0.5));
 
@@ -544,7 +520,7 @@ public class MainActivity extends AppCompatActivity {
                 Utils.matToBitmap(afterImgprsResult, x025Bitmap);
                 image = x025Bitmap;
 
-                int mode = 1;
+                int mode = 1;       //用於選擇要顯示的圖片模式   , 0=經過校正的原圖,1=有框線,2=經過侵蝕膨脹的灰階圖,3=灰階圖,4=經過sobel detection的灰階圖
                 if (mode == 0) {
                     Utils.matToBitmap(afterImgprsResult, x025Bitmap);
                 } else if (mode == 1) {
@@ -556,19 +532,18 @@ public class MainActivity extends AppCompatActivity {
                 } else if (mode == 4) {
                     Utils.matToBitmap(sobelMat, x025Bitmap);
                 }
-                //Utils.matToBitmap(x025Mat, x025Bitmap); //convert mat to bitmap
-                //Utils.matToBitmap(rgbMat, dstBitmap); //convert mat to bitmap
+
 
                 displayImage.setImageBitmap(x025Bitmap);
 
-                //runOCR.setEnabled(true);
+
 
             } catch (Exception e) {
                 e.printStackTrace();
             }
         }
         if (requestCode == REQUEST_TO_GALLERY) {
-            Log.d("拍照正常", "是");
+            Log.d("打開相簿正常", "是");
             try {
                 Uri selectedImage = data.getData();
                 String[] filePathColumn = {
@@ -585,14 +560,12 @@ public class MainActivity extends AppCompatActivity {
                 Bitmap srcBitmap = BitmapFactory.decodeFile(path);
 
                 Bitmap dstBitmap = Bitmap.createBitmap(srcBitmap.getWidth(), srcBitmap.getHeight(), Bitmap.Config.RGB_565);
-                //    Bitmap x025Bitmap = Bitmap.createBitmap(srcBitmap.getWidth()/4, srcBitmap.getHeight()/4, Bitmap.Config.RGB_565);
+
 
                 image = srcBitmap;
 
 
                 Mat rgbMat = new Mat();
-                Mat dstMat = new Mat();
-                Mat grayMat = new Mat();
                 Mat x05Mat = new Mat();
                 Mat x025Mat = new Mat();
 
@@ -601,15 +574,12 @@ public class MainActivity extends AppCompatActivity {
 
                 int mode = 1;
 
-             /* Imgproc.cvtColor(rgbMat, grayMat, Imgproc.COLOR_RGB2GRAY);
-                Imgproc.bilateralFilter(grayMat,dstMat,5,30,30);
-                Imgproc.cvtColor(grayMat,rgbMat,Imgproc.COLOR_GRAY2RGB);*/
+
                 if (rgbMat.cols() > 1500 && rgbMat.rows() > 1500) {
                     Imgproc.pyrDown(rgbMat, x05Mat, new Size(rgbMat.cols() * 0.5, rgbMat.rows() * 0.5));
                     Imgproc.pyrDown(x05Mat, x025Mat, new Size(x05Mat.cols() * 0.5, x05Mat.rows() * 0.5));
 
                     ImagePers imgprs = new ImagePers(x025Mat);
-                    System.out.println("-------------5654544444444444444444444444444444444");
                     Mat afterImgprsResult = imgprs.returnImg();
 
                     ROIs.clear();
@@ -656,18 +626,8 @@ public class MainActivity extends AppCompatActivity {
                     }
                 }
 
-                System.out.println(ROIs.size() + "個\n");
+
                 displayImage.setImageBitmap(dstBitmap);
-
-
-                /*
-                dstBitmap = Bitmap.createBitmap(ROIs.get(4).width(), ROIs.get(4).height(), Bitmap.Config.ARGB_8888);
-                Utils.matToBitmap(ROIs.get(4), dstBitmap); //convert mat to bitmap
-                System.out.println(ROIs.size());
-                displayImage.setImageBitmap(dstBitmap);
-                */
-
-                //runOCR.setEnabled(true);
 
             } catch (Exception e) {
                 e.printStackTrace();
@@ -712,23 +672,12 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    // CV Function Region
-    public Mat blur(Mat rgbMat) {
-        Mat dstMat = new Mat();
-        Mat aaMat = new Mat();
 
-        Imgproc.cvtColor(rgbMat, aaMat, COLOR_RGB2GRAY);
-        Imgproc.bilateralFilter(aaMat, dstMat, 300, 200, 200);
-        rgbMat = dstMat.clone();
-        return rgbMat;
-    }
 
     public Mat detectText(Mat rgbMat) {
         Mat grayMat = new Mat();
         Mat grayMat_equalizeHist = new Mat();
         Imgproc.cvtColor(rgbMat, grayMat, Imgproc.COLOR_RGB2GRAY);//rgbMat to gray grayMat
- /*      Imgproc.equalizeHist(grayMat,grayMat_equalizeHist);
-        Mat dial = preprocessText(grayMat_equalizeHist);*/
         gMat = grayMat.clone();
         Mat dial = preprocessText(grayMat);
         Bitmap dstBitmap;
@@ -736,30 +685,12 @@ public class MainActivity extends AppCompatActivity {
 
         Vector<RotatedRect> rects = findTextRegion(dial);
         Utils.matToBitmap(dial, dstBitmap);
-        //印出 dilate 後的圖
-        //      displayImage.setImageBitmap(dstBitmap);
-        dilaMat = dial.clone();
-        Log.d("做完沒", "做完了");
-        //  Vector<Bitmap> brectsBitmap = new Vector<>();
 
-        /*for(int i=0;i<rects.size();i++)
-        {
-            *//*Point P[] = new Point[4];
-            rects.get(i).points(P);
-            for(int j=0;j<4;j++)
-            {
-                Imgproc.line(rgbMat, P[j], P[(j + 1) % 4], new Scalar(0,255,0), 2);
-            }*//*
-            Imgproc.rectangle(rgbMat, rects.get(i).boundingRect().tl(), rects.get(i).boundingRect().br(), new Scalar(0,255,0), 2);
-            *//*Mat imgDesc = new Mat(rects.get(i).boundingRect().height, rects.get(i).boundingRect().width, CvType.CV_8U);
-            Mat imgROI = new Mat(rgbMat, rects.get(i).boundingRect());
-            imgROI.copyTo(imgDesc);
-            Bitmap imgDescBitmap = Bitmap.createBitmap(imgDesc.width(), imgDesc.height(), Bitmap.Config.ARGB_8888);
-            brectsBitmap.add(imgDescBitmap);*//*
-        }*/
+        dilaMat = dial.clone();
+
+
 
         // 在rects這個Vector<RotatedRect>中 訪問每個element並畫出邊線框
-
         LineMat = rgbMat.clone();
         for (RotatedRect rect : rects) {
             org.opencv.core.Point[] P = new org.opencv.core.Point[4];
@@ -770,7 +701,7 @@ public class MainActivity extends AppCompatActivity {
         }
 
 
-        Log.d("畫線", "畫完了");
+
         //在TextRects這個Vector<Rect>中 用每一個element從原圖中擷取ROI區域 並放進ROIs這個Vector<Mat>中
         for (Rect rect : TextRects) {
             if (rect.x + rect.width > rgbMat.cols())
@@ -780,52 +711,22 @@ public class MainActivity extends AppCompatActivity {
             Mat roi_img = new Mat(rgbMat, rect);
             ROIs.add(roi_img);
         }
-        Log.d("ROI做完沒", "做完了");
+
 
         return rgbMat;
     }
 
     private Mat preprocessText(Mat gray) {
-        // Sobel, find border
-  /*      Mat sbl = new Mat();
-        Imgproc.Sobel(grayMat, sbl, CV_8U, 1, 0, 3, 1, 0);
-        // Binary
-        Mat bi = new Mat();
-        Imgproc.threshold(sbl, bi, 0, 255, Imgproc.THRESH_OTSU + Imgproc.THRESH_BINARY);
-        Mat element1 = Imgproc.getStructuringElement(MORPH_RECT, new Size(45, 12));
-        // 1st dilate
-        Mat dlt1 = new Mat();
-        Imgproc.dilate(bi, dlt1, element1);
-        return  dlt1;*/
+        // Sobel, find edges
         Mat sobel = new Mat();
         Imgproc.Sobel(gray, sobel, CvType.CV_8U, 1, 0, 3, 1, 0);
         sobelMat = sobel.clone();
 
-        //////////// See the Sobel /////////////
-       /* Bitmap dstBitmap;
-        dstBitmap = Bitmap.createBitmap(gray.width(), gray.height(), Bitmap.Config.ARGB_8888);
-        Utils.matToBitmap(sobel, dstBitmap);
-        displayImage.setImageBitmap(dstBitmap);*/
-        //////////////////////////////////////////
 
         Mat binary = new Mat();
         Imgproc.threshold(sobel, binary, 0, 255, Imgproc.THRESH_OTSU + Imgproc.THRESH_BINARY);
         final Point anchor = new Point(-1, -1);
         final int iterations = 1;
-        /*final Size kernelSize1 = new Size(30, 9);
-        final Size kernelSize2 = new Size(24, 4);*/
-/*
-        final Size kernelSize1 = new Size(15, 7);
-        final Size kernelSize2 = new Size(20, 5);
-        final Size kernelSize3 = new Size(20,7);
-        */
- /*       final Size kernelSize1 = new Size(20, 8);
-        final Size kernelSize2 = new Size(15, 12);
-        final Size kernelSize3 = new Size(10,9);*/
-
-        /*final Size kernelSize1 = new Size(20, 8);
-        final Size kernelSize2 = new Size(24, 7);
-        final Size kernelSize3 = new Size(10,9);*/
 
         final Size kernelSize1 = new Size(20, 8);
         final Size kernelSize2 = new Size(24, 7);
@@ -850,28 +751,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private Vector<RotatedRect> findTextRegion(Mat img) {
-    /*    Vector<RotatedRect> rects = new Vector<>();
-        // find contours
-        Vector<MatOfPoint> contours = new Vector<>();
-        MatOfPoint2f contours2f = new MatOfPoint2f();
-        MatOfInt4 hry = new MatOfInt4();
-        Imgproc.findContours(ppedMat, contours, hry, RETR_CCOMP, CHAIN_APPROX_SIMPLE, new Point(0, 0));
-        // find small area
-        for(int i=0;i<contours.size();i++)
-        {
-            double area = Imgproc.contourArea(contours.get(i));
-            if(area < 15000) continue;  //temp 15000
-            contours.get(i).convertTo(contours2f, CvType.CV_32FC2);
-            double epsilon = 0.001 * Imgproc.arcLength(contours2f, true);
-            MatOfPoint2f approx = new MatOfPoint2f();
-            Imgproc.approxPolyDP(contours2f, approx, epsilon, true);
-            RotatedRect rect = Imgproc.minAreaRect(contours2f);
-            int m_width = rect.boundingRect().width;
-            int m_height = rect.boundingRect().height;
-            if (m_height > m_width * 1.2) continue;
-            rects.add(rect);
-        }
-        return  rects;*/
+
         Vector<RotatedRect> rects = new Vector<>();
         List<MatOfPoint> contours = new ArrayList<>();
         Imgproc.findContours(img, contours, new Mat(), Imgproc.RETR_EXTERNAL, Imgproc.CHAIN_APPROX_SIMPLE);
@@ -899,7 +779,7 @@ public class MainActivity extends AppCompatActivity {
             rects.add(rect);
 
 
-            Log.d("做完沒", "還沒");
+
             pts = new Point[4];
             rect.points(pts);   //提取RotatedRect中的四個頂點 放進pts[4]
             int xx = (int) rect.boundingRect().tl().x;
@@ -934,39 +814,11 @@ public class MainActivity extends AppCompatActivity {
         displayEmail.setEnabled(true);
         displayEmail.setFocusableInTouchMode(true);
         displayEmail.requestFocus();
-/*
-        //   抓出單一個ROI來辨識
-        Bitmap dstBitmap = Bitmap.createBitmap(ROIs.get(2).width(), ROIs.get(2).height(), Bitmap.Config.ARGB_8888);
-        Utils.matToBitmap(ROIs.get(2), dstBitmap);
-        mTess.setImage(dstBitmap);
-        OCRresult = mTess.getUTF8Text();
-        displayText.setText(OCRresult);
-        System.out.println(OCRresult);
-                */
 
- /*
-        // 掃全圖
-        mTess.setImage(image);
-        OCRresult = mTess.getUTF8Text();
-        displayText.setText(OCRresult);
-        System.out.println(OCRresult);
-        */
-        //ROIs.clear();
-        //runOCR.setEnabled(false);
     }
 
     public void processImageCounting() {
-        /*
-        String OCRresult = null;
-        mTess.setImage(image);
-        OCRresult = mTess.getUTF8Text();
-        //displayText.setText(OCRresult);
-        extractName(OCRresult);
-        extractEmail(OCRresult);
-        extractPhone(OCRresult);
-        System.out.println(OCRresult);
-*/
-        //displayText.setText("");
+
         String OCRresult = "";
         String AllResult = "";
 
@@ -976,11 +828,10 @@ public class MainActivity extends AppCompatActivity {
             Utils.matToBitmap(rgbMat, dstBitmap);
             mTess.setImage(dstBitmap);
             OCRresult = mTess.getUTF8Text();
-            //      displayImage.setImageBitmap(dstBitmap);
             System.out.println(OCRresult);
             AllResult = OCRresult + "\n" + AllResult;
         }
-        //displayText.append(AllResult);
+
         extractName(AllResult);
         extractEmail(AllResult);
         extractPhone(AllResult);
@@ -1154,10 +1005,10 @@ public class MainActivity extends AppCompatActivity {
         if (Build.VERSION.SDK_INT >= 23) {
             int REQUEST_CODE_CONTACT = 101;
             String[] permissions = {Manifest.permission.WRITE_EXTERNAL_STORAGE};
-            //验证是否许可权限
+            //驗證權限
             for (String str : permissions) {
                 if (this.checkSelfPermission(str) != PackageManager.PERMISSION_GRANTED) {
-                    //申请权限
+                    //請求權限
                     this.requestPermissions(permissions, REQUEST_CODE_CONTACT);
                     return;
                 }

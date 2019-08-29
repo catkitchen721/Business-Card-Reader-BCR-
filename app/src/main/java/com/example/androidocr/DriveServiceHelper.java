@@ -41,10 +41,7 @@ public class DriveServiceHelper {
             File metadata = new File();                 //設定要上傳的檔案的metadata
             metadata.setName(UPLOAD_FILE.getName());
             FileContent mediaContent = new FileContent("application/vnd.ms-excel", UPLOAD_FILE);    //設定要上傳的檔案的content
-/*                    .setParents(Collections.singletonList("root"))
-                    .setMimeType("text/plain")
 
-                    .setName("Untitled file");*/
             int exist = 0;
             String filename;
             String fileId = "";
@@ -88,25 +85,4 @@ public class DriveServiceHelper {
             }
         });
     }
-  /*  public void createFile() {
-
-
-        File fileMetadata = new File();
-        fileMetadata.setName("photo.jpg");
-        java.io.File filePath = new java.io.File("files/photo.jpg");
-        FileContent mediaContent = new FileContent("image/jpeg", filePath);
-
-        File file = null;
-        try {
-            file = driveService.files().create(fileMetadata, mediaContent)
-                    .setFields("id")
-                    .execute();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        System.out.println("File ID: " + file.getId());
-
-
-    }*/
-
 }
